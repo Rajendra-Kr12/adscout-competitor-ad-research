@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fbcm.local/schemas/ad.schema.json",
+  "title": "Normalized Ad Library ad (schema v0.1)",
+  "description": "One ad from ads_archive, normalized. See docs/research/fbcm-research-r1.md section 7.3. ad_snapshot_url is never stored here because it embeds the access token.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "library_id", "page", "permalink", "coverage_basis", "dates", "platforms", "languages", "media_type_hint", "text", "eu_metrics", "political_metrics", "derived", "llm", "creative", "provenance"],
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "library_id": { "type": "string", "pattern": "^[0-9]+$" },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": ["string", "null"] },
+        "name": { "type": ["string", "null"] }
+      }
+    },
+    "permalink": { "type": "string", "pattern": "^https://www\\.facebook\\.com/ads/library/\\?id=[0-9]+$" },
+    "coverage_basis": { "enum": ["eu_uk_delivery", "political_issue", "mcp_library_search", "fixture"] },
+    "dates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created", "delivery_start", "delivery_stop", "start_month", "active_months", "days_running", "active_at_fetch"],
+      "properties": {
+        "created": { "type": ["string", "null"] },
+        "delivery_start": { "type": ["string", "null"] },
+        "delivery_stop": { "type": ["string", "null"] },
+        "start_month": { "type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}$" },
+        "active_months": { "type": "array", "items": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" } },
+        "days_running": { "type": ["integer", "null"], "minimum": 0 },
+        "active_at_fetch": { "type": ["boolean", "null"] }
+      }
+    },
+    "platforms": { "type": "array", "items": { "type": "string" } },
+    "languages": { "type": "array", "items": { "type": "string" } },
+    "media_type_hint": { "enum": ["IMAGE", "MEME", "VIDEO", "NONE", null] },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bodies", "link_titles", "link_descriptions", "link_captions"],
+      "properties": {
+        "bodies": { "type": "array", "items": { "type": "string" } },
+        "link_titles": { "type": "array", "items": { "type": "string" } },
+        "link_descriptions": { "type": "array", "items": { "type": "string" } },
+        "link_captions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "eu_metrics": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "eu_total_reach": { "type": ["integer", "null"] },
+        "total_reach_by_location": { "type": ["object", "array", "null"] },
+        "age_country_gender_reach_breakdown": { "type": ["array", "null"] },
+        "target_ages": { "type": ["array", "null"] },
+        "target_gender": { "type": ["string", "null"] },
+        "target_locations": { "type": ["array", "null"] },
+        "beneficiary_payers": { "type": ["array", "null"] }
+      }
+    },
+    "political_metrics": { "type": ["object", "null"] },
+    "derived": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["body_chars", "body_words", "body_lines", "variant_count", "emoji_count", "hashtag_count", "has_price", "has_percent_off", "first_line", "landing_domain", "near_duplicate_of"],
+      "properties": {
+        "body_chars": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "body_words": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "body_lines": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+        "variant_count": { "type": "integer", "minimum": 0 },
+        "emoji_count": { "type": "integer", "minimum": 0 },
+        "hashtag_count": { "type": "integer", "minimum": 0 },
+        "has_price": { "type": "boolean" },
+        "has_percent_off": { "type": "boolean" },
+        "first_line": { "type": ["string", "null"] },
+        "landing_domain": { "type": ["string", "null"] },
+        "near_duplicate_of": { "type": ["string", "null"] }
+      }
+    },
+    "llm": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/llm" }] },
+    "creative": { "type": "null", "description": "Phase 1 (not built): images[], video{}" },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["api_version", "fetched_at", "run_id", "extractor_model", "prompt_version"],
+      "properties": {
+        "api_version": { "type": ["string", "null"] },
+        "fetched_at": { "type": "string" },
+        "run_id": { "type": "string" },
+        "extractor_model": { "type": ["string", "null"] },
+        "prompt_version": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "score": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hook", "proposition", "offer", "cta", "tone", "audience_signals", "format_guess", "quality", "confidence"],
+      "properties": {
+        "hook": { "type": ["string", "null"], "maxLength": 300 },
+        "proposition": { "type": ["string", "null"], "maxLength": 300 },
+        "offer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "text", "deadline"],
+          "properties": {
+            "type": { "enum": ["none", "discount", "free_shipping", "free_gift", "bundle", "trial", "sample", "price_point", "bogo", "loyalty", "other"] },
+            "text": { "type": ["string", "null"] },
+            "deadline": { "type": ["string", "null"] }
+          }
+        },
+        "cta": { "type": ["string", "null"] },
+        "tone": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "enum": ["urgent", "confident", "warm", "playful", "educational", "aspirational", "luxurious", "clinical", "authentic", "calm", "celebratory", "empathetic", "salesy"] }
+        },
+        "audience_signals": { "type": "array", "items": { "type": "string" }, "maxItems": 5 },
+        "format_guess": { "enum": ["single_image", "carousel", "video", "multi_variant", "text_only", "unknown"] },
+        "quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["clarity", "specificity", "brand_consistency", "notes"],
+          "properties": {
+            "clarity": { "$ref": "#/$defs/score" },
+            "specificity": { "$ref": "#/$defs/score" },
+            "brand_consistency": { "$ref": "#/$defs/score" },
+            "notes": { "type": "string", "maxLength": 400 }
+          }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

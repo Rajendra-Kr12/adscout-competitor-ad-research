@@ -1,0 +1,22 @@
+# Secrets - only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Platform Data with embedded tokens / media (retention-limited, never committed)
+data/raw/
+data/media/
+data/llm/
+
+# Normalized per-ad data and generated reports are Platform Data too; keep them local
+data/ads/
+reports/*/
+
+# Python / tooling caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store

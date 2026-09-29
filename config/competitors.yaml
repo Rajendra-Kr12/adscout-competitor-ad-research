@@ -1,0 +1,44 @@
+# Competitors / test brands. The UK pick is not final - edit here, not in code.
+# key            - used as the folder name under data/ and reports/
+# page_id        - numeric Facebook Page ID (string). null = unknown; use search_terms
+#                  first and read page_id from the results.
+# page_id_verified - false until an ads_archive call has confirmed it.
+# countries      - ad_reached_countries for the query (ISO-2).
+# coverage_note  - what we expect the API to return; copied into the report.
+
+competitors:
+  - key: kapiva
+    name: Kapiva
+    page_url: https://www.facebook.com/kapiva.official
+    page_id: null
+    page_id_verified: false
+    search_terms: Kapiva
+    countries: [IN]
+    role: test-india-only
+    coverage_note: >-
+      India-only D2C brand. ads_archive returns commercial ads only when they were
+      delivered to the EU/UK, so an empty result is expected. This probes the India gap.
+
+  - key: forest-essentials-uk
+    name: Forest Essentials UK
+    page_url: https://www.facebook.com/Forest-Essentials-UK-100331625781604
+    page_id: "100331625781604"
+    page_id_verified: false   # inferred from the Page slug; confirm with a keyword query
+    search_terms: Forest Essentials
+    countries: [GB]
+    role: test-uk-primary
+    coverage_note: >-
+      UK arm of an Indian Ayurveda brand (GBP storefront, UK Pixel). GB-delivered
+      commercial ads should be returned.
+
+  - key: pukka-herbs
+    name: Pukka Herbs
+    page_url: https://www.facebook.com/Pukkaherbs
+    page_id: null
+    page_id_verified: false
+    search_terms: Pukka Herbs
+    countries: [GB]
+    role: test-uk-fallback
+    coverage_note: >-
+      Fallback UK brand if Forest Essentials UK returns 0 GB ads. Retail-only, so
+      expect brand/awareness ads.
