@@ -1,0 +1,120 @@
+{
+ "_comment": "SYNTHETIC. Page 1 of a recorded-shape ads_archive response.",
+ "data": [
+  {
+   "id": "990000000000101",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2025-11-20",
+   "ad_delivery_start_time": "2025-11-20",
+   "ad_creative_bodies": [
+    "Our bestselling Kumkumadi night oil, now in a travel size.\nMade with saffron and 21 herbs."
+   ],
+   "ad_creative_link_titles": [
+    "Kumkumadi Night Oil 15ml"
+   ],
+   "ad_creative_link_descriptions": [
+    "Free UK delivery over £40"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "eu_total_reach": 48000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 24000,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ],
+   "ad_snapshot_url": "https://www.facebook.com/ads/archive/render_ad/?id=990000000000101&access_token=FIXTURE-NOT-A-REAL-TOKEN"
+  },
+  {
+   "id": "990000000000102",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-01-05",
+   "ad_delivery_start_time": "2026-01-05",
+   "ad_creative_bodies": [
+    "New year, new ritual ✨\nStart 2026 with 20% off all facial oils. Code GLOW20.\n#ayurveda #skincare"
+   ],
+   "ad_creative_link_titles": [
+    "20% off facial oils"
+   ],
+   "ad_creative_link_descriptions": [
+    "Ends 31 January"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "ad_delivery_stop_time": "2026-01-31",
+   "eu_total_reach": 91000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 45500,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ],
+   "ad_snapshot_url": "https://www.facebook.com/ads/archive/render_ad/?id=990000000000102&access_token=FIXTURE-NOT-A-REAL-TOKEN"
+  }
+ ],
+ "paging": {
+  "cursors": {
+   "after": "QVFIUkFTWU5USEVUSUM"
+  },
+  "next": "https://graph.facebook.com/v26.0/ads_archive?access_token=FIXTURE-NOT-A-REAL-TOKEN&ad_reached_countries=%5B%22GB%22%5D&search_page_ids=%5B%22900000000000001%22%5D&ad_active_status=ALL&fields=id%2Cpage_id&limit=2&after=QVFIUkFTWU5USEVUSUM"
+ }
+}

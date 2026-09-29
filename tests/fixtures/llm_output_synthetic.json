@@ -1,0 +1,176 @@
+{
+ "_comment": "SYNTHETIC ad-extractor output for tests/fixtures/ads_archive_synthetic.json. Hand-written, not model output.",
+ "prompt_version": "extract-v1",
+ "extractor_model": "fixture",
+ "results": [
+  {
+   "library_id": "990000000000102",
+   "llm": {
+    "hook": "New year, new ritual",
+    "proposition": "Start the year with a facial-oil ritual at a discount",
+    "offer": {
+     "type": "discount",
+     "text": "20% off all facial oils, code GLOW20",
+     "deadline": "2026-01-31"
+    },
+    "cta": "Shop now",
+    "tone": [
+     "celebratory",
+     "urgent"
+    ],
+    "audience_signals": [
+     "new-year resolvers",
+     "skincare enthusiasts"
+    ],
+    "format_guess": "single_image",
+    "quality": {
+     "clarity": 4,
+     "specificity": 4,
+     "brand_consistency": 4,
+     "notes": "Clear seasonal hook; code and end date stated."
+    },
+    "confidence": 0.85
+   }
+  },
+  {
+   "library_id": "990000000000103",
+   "llm": {
+    "hook": "Cleanse with our soundarya soap",
+    "proposition": "A simple three-step Ayurvedic skincare ritual",
+    "offer": {
+     "type": "none",
+     "text": null,
+     "deadline": null
+    },
+    "cta": null,
+    "tone": [
+     "educational",
+     "calm"
+    ],
+    "audience_signals": [
+     "routine builders"
+    ],
+    "format_guess": "carousel",
+    "quality": {
+     "clarity": 4,
+     "specificity": 3,
+     "brand_consistency": 5,
+     "notes": "Card-per-step structure; no offer."
+    },
+    "confidence": 0.8
+   }
+  },
+  {
+   "library_id": "990000000000104",
+   "llm": {
+    "hook": "Is your skin tired of winter?",
+    "proposition": "Saffron day cream restores glow in 14 days",
+    "offer": {
+     "type": "price_point",
+     "text": "From £45",
+     "deadline": null
+    },
+    "cta": "Shop the winter edit",
+    "tone": [
+     "empathetic",
+     "confident"
+    ],
+    "audience_signals": [
+     "dry-skin sufferers"
+    ],
+    "format_guess": "video",
+    "quality": {
+     "clarity": 5,
+     "specificity": 4,
+     "brand_consistency": 4,
+     "notes": "Problem-question hook with a time-bound claim."
+    },
+    "confidence": 0.85
+   }
+  },
+  {
+   "library_id": "990000000000106",
+   "llm": {
+    "hook": "Is your skin tired of winter?",
+    "proposition": "Saffron day cream restores glow in 14 days",
+    "offer": {
+     "type": "price_point",
+     "text": "From £45",
+     "deadline": null
+    },
+    "cta": "Shop now",
+    "tone": [
+     "empathetic",
+     "confident"
+    ],
+    "audience_signals": [
+     "dry-skin sufferers"
+    ],
+    "format_guess": "video",
+    "quality": {
+     "clarity": 5,
+     "specificity": 4,
+     "brand_consistency": 4,
+     "notes": "Re-run of 990000000000104 copy."
+    },
+    "confidence": 0.85
+   }
+  },
+  {
+   "library_id": "990000000000108",
+   "llm": {
+    "hook": "Ayurveda is not a trend",
+    "proposition": "5,000-year heritage as proof of authenticity",
+    "offer": {
+     "type": "none",
+     "text": null,
+     "deadline": null
+    },
+    "cta": "Discover our story",
+    "tone": [
+     "authentic",
+     "aspirational"
+    ],
+    "audience_signals": [
+     "heritage seekers"
+    ],
+    "format_guess": "video",
+    "quality": {
+     "clarity": 4,
+     "specificity": 2,
+     "brand_consistency": 5,
+     "notes": "Brand story; low specificity by design."
+    },
+    "confidence": 0.75
+   }
+  },
+  {
+   "library_id": "990000000000110",
+   "llm": {
+    "hook": "Flat 25% off sitewide this weekend only!",
+    "proposition": "Short sitewide sale",
+    "offer": {
+     "type": "discount",
+     "text": "25% off sitewide, code SUMMER25",
+     "deadline": "this weekend"
+    },
+    "cta": "Shop now",
+    "tone": [
+     "urgent",
+     "salesy"
+    ],
+    "audience_signals": [
+     "deal seekers"
+    ],
+    "format_guess": "single_image",
+    "quality": {
+     "clarity": 4,
+     "specificity": 3,
+     "brand_consistency": 2,
+     "notes": "Emoji-heavy and off the calmer brand voice."
+    },
+    "confidence": 0.9
+   }
+  }
+ ]
+}

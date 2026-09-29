@@ -1,0 +1,771 @@
+{
+ "_comment": "SYNTHETIC FIXTURE. Not real ads, pages, ids, reach or tokens. Shape follows ads_archive / ArchivedAd fields (v26.0 docs). Keys starting with '_' drive tests/fixture_api only.",
+ "ads": [
+  {
+   "id": "990000000000101",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2025-11-20",
+   "ad_delivery_start_time": "2025-11-20",
+   "ad_creative_bodies": [
+    "Our bestselling Kumkumadi night oil, now in a travel size.\nMade with saffron and 21 herbs."
+   ],
+   "ad_creative_link_titles": [
+    "Kumkumadi Night Oil 15ml"
+   ],
+   "ad_creative_link_descriptions": [
+    "Free UK delivery over £40"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "IMAGE"
+   },
+   "eu_total_reach": 48000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 24000,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000102",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-01-05",
+   "ad_delivery_start_time": "2026-01-05",
+   "ad_creative_bodies": [
+    "New year, new ritual ✨\nStart 2026 with 20% off all facial oils. Code GLOW20.\n#ayurveda #skincare"
+   ],
+   "ad_creative_link_titles": [
+    "20% off facial oils"
+   ],
+   "ad_creative_link_descriptions": [
+    "Ends 31 January"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "IMAGE"
+   },
+   "ad_delivery_stop_time": "2026-01-31",
+   "eu_total_reach": 91000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 45500,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000103",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-01-12",
+   "ad_delivery_start_time": "2026-01-12",
+   "ad_creative_bodies": [
+    "Card 1: Cleanse with our soundarya soap.",
+    "Card 2: Tone with pure rose water.",
+    "Card 3: Nourish with Kumkumadi oil."
+   ],
+   "ad_creative_link_titles": [
+    "The 3-step ritual",
+    "Rose Water",
+    "Kumkumadi Oil"
+   ],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "IMAGE"
+   },
+   "ad_delivery_stop_time": "2026-02-15",
+   "eu_total_reach": 30500,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 15250,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000104",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-02-01",
+   "ad_delivery_start_time": "2026-02-01",
+   "ad_creative_bodies": [
+    "Is your skin tired of winter?\nOur saffron day cream restores glow in 14 days. From £45."
+   ],
+   "ad_creative_link_titles": [
+    "Saffron Day Cream"
+   ],
+   "ad_creative_link_descriptions": [
+    "Shop the winter edit"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "VIDEO"
+   },
+   "ad_delivery_stop_time": "2026-03-10",
+   "eu_total_reach": 120400,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 60200,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000105",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-02-14",
+   "ad_delivery_start_time": "2026-02-14",
+   "ad_creative_bodies": [
+    "Valentine's gift sets from £55 💝 Hand-wrapped in our Covent Garden store."
+   ],
+   "ad_creative_link_titles": [
+    "Gift sets"
+   ],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "IMAGE"
+   },
+   "ad_delivery_stop_time": "2026-02-28",
+   "eu_total_reach": 22000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 11000,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000106",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-03-03",
+   "ad_delivery_start_time": "2026-03-03",
+   "ad_creative_bodies": [
+    "Is your skin tired of winter?\nOur saffron day cream restores glow in 14 days. From £45."
+   ],
+   "ad_creative_link_titles": [
+    "Saffron Day Cream"
+   ],
+   "ad_creative_link_descriptions": [
+    "Shop now"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "VIDEO"
+   },
+   "eu_total_reach": 150000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 75000,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000107",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-04-10",
+   "ad_delivery_start_time": "2026-04-10",
+   "ad_creative_bodies": [
+    "Spring edit: up to 30% off hair oils.\nBhringraj and amla for stronger, shinier hair."
+   ],
+   "ad_creative_link_titles": [
+    "Up to 30% off hair oils"
+   ],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "IMAGE"
+   },
+   "ad_delivery_stop_time": "2026-05-20",
+   "eu_total_reach": 64000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 32000,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000108",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-05-02",
+   "ad_delivery_start_time": "2026-05-02",
+   "ad_creative_bodies": [
+    "Ayurveda is not a trend. It is 5,000 years of practice.\nDiscover our story."
+   ],
+   "ad_creative_link_titles": [
+    "Our story"
+   ],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM",
+    "AUDIENCE_NETWORK"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "VIDEO"
+   },
+   "ad_delivery_stop_time": "2026-06-30",
+   "eu_total_reach": 210000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 105000,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000109",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-06-15",
+   "ad_delivery_start_time": "2026-06-15",
+   "ad_creative_bodies": [
+    "Summer SPF gel with sandalwood. Light, non-greasy, SPF 30.",
+    "Summer SPF gel with sandalwood - now with a free travel pouch."
+   ],
+   "ad_creative_link_titles": [
+    "Sandalwood SPF 30"
+   ],
+   "ad_creative_link_descriptions": [
+    "Free pouch with every order"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "IMAGE"
+   },
+   "eu_total_reach": 40500,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 20250,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000110",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-07-01",
+   "ad_delivery_start_time": "2026-07-01",
+   "ad_creative_bodies": [
+    "Flat 25% off sitewide this weekend only! 🔥🔥\nUse code SUMMER25."
+   ],
+   "ad_creative_link_titles": [
+    "25% off sitewide"
+   ],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "MEME"
+   },
+   "ad_delivery_stop_time": "2026-07-21",
+   "eu_total_reach": 175000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 87500,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000111",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-08-08",
+   "ad_delivery_start_time": "2026-08-08",
+   "ad_creative_bodies": [
+    "Meet the facialist: book a free 20-minute Ayurvedic skin consultation in London."
+   ],
+   "ad_creative_link_titles": [
+    "Free consultation"
+   ],
+   "ad_creative_link_descriptions": [
+    "Covent Garden"
+   ],
+   "ad_creative_link_captions": [
+    "WWW.SYNTHETIC-AYURVEDA.EXAMPLE"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "VIDEO"
+   },
+   "eu_total_reach": 18000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 9000,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000112",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-09-02",
+   "ad_delivery_start_time": "2026-09-02",
+   "ad_creative_bodies": [
+    "Autumn ritual: warm oil massage with our Mahabhringraj oil. £38."
+   ],
+   "ad_creative_link_titles": [
+    "Mahabhringraj Oil"
+   ],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "IMAGE"
+   },
+   "eu_total_reach": 9000,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 4500,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000201",
+   "page_id": "900000000000002",
+   "page_name": "Synthetic Ayurveda IN (FIXTURE)",
+   "ad_creation_time": "2026-03-01",
+   "ad_delivery_start_time": "2026-03-01",
+   "ad_creative_bodies": [
+    "Diwali special: flat 40% off! Rs. 999 only."
+   ],
+   "ad_creative_link_titles": [],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en",
+    "hi"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "IN"
+    ],
+    "media_type": "IMAGE"
+   }
+  },
+  {
+   "id": "990000000000202",
+   "page_id": "900000000000002",
+   "page_name": "Synthetic Ayurveda IN (FIXTURE)",
+   "ad_creation_time": "2026-05-01",
+   "ad_delivery_start_time": "2026-05-01",
+   "ad_creative_bodies": [
+    "Ayurvedic juices for immunity."
+   ],
+   "ad_creative_link_titles": [],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "IN"
+    ],
+    "media_type": "VIDEO"
+   },
+   "ad_delivery_stop_time": "2026-06-01"
+  }
+ ]
+}

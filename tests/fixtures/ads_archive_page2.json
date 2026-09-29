@@ -1,0 +1,67 @@
+{
+ "_comment": "SYNTHETIC. Last page (no paging.next).",
+ "data": [
+  {
+   "id": "990000000000103",
+   "page_id": "900000000000001",
+   "page_name": "Synthetic Ayurveda UK (FIXTURE)",
+   "ad_creation_time": "2026-01-12",
+   "ad_delivery_start_time": "2026-01-12",
+   "ad_creative_bodies": [
+    "Card 1: Cleanse with our soundarya soap.",
+    "Card 2: Tone with pure rose water.",
+    "Card 3: Nourish with Kumkumadi oil."
+   ],
+   "ad_creative_link_titles": [
+    "The 3-step ritual",
+    "Rose Water",
+    "Kumkumadi Oil"
+   ],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [
+    "synthetic-ayurveda.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM"
+   ],
+   "ad_delivery_stop_time": "2026-02-15",
+   "eu_total_reach": 30500,
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 0,
+       "female": 15250,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ],
+   "ad_snapshot_url": "https://www.facebook.com/ads/archive/render_ad/?id=990000000000103&access_token=FIXTURE-NOT-A-REAL-TOKEN"
+  }
+ ],
+ "paging": {
+  "cursors": {
+   "after": "QVFIUkVORA"
+  }
+ }
+}
