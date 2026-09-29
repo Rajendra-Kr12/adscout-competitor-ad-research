@@ -1,0 +1,30 @@
+# Decisions
+
+Newest first. Each entry records the decision, why it was made, and the status.
+
+## 2026-09-29 - Phase 0 build
+
+| # | Decision | Why | Status |
+|---|---|---|---|
+| 1 | **Run locally in Claude Code on the official Ad Library API (`ads_archive`).** Nothing is hosted inside facebook.com | No non-game tool can be hosted inside Facebook any more (Canvas ends 2026-09-30, and Page tabs can't be created). See research §1 | Decided |
+| 2 | **Official Meta APIs only.** No scraping or automated browsing of facebook.com, the Ad Library website, or third-party scraper MCPs | Meta Terms §3.2 bans automated collection. See `docs/compliance.md` | Decided (captain) |
+| 3 | **Phase 0 scope:** Page ID or keyword plus a month range -> every ad -> grouped by month with permalinks and text -> Claude extracts hook, offer, CTA, tone, length and quality -> markdown report | Research §6-7. Smallest useful loop | Built |
+| 4 | Deterministic work is done by Python scripts (fetch, normalize, metrics, report numbers). Judgement is done by Claude Code sub-agents (`ad-extractor`, `report-writer`), with outputs validated against `schemas/ad.schema.json` | Repeatable numbers and a validated LLM layer; prompts are versioned (`extract-v1`) | Built |
+| 5 | Sub-agents specify no hardcoded model IDs: `ad-extractor` uses the `sonnet` alias and `report-writer` uses `inherit` | Avoid pinning IDs that may not exist | Built |
+| 6 | One query per calendar month (`ad_delivery_date_min/max`), `ad_active_status=ALL`, and every `paging.next` is followed. Ads are deduplicated by library ID at normalize time | Meets the research acceptance criteria. Month windows keep pages small | Built |
+| 7 | Reports link only to the public permalink `https://www.facebook.com/ads/library/?id=<id>`. `ad_snapshot_url` stays in `data/raw/`. Writers refuse any output containing `access_token` | The snapshot URL embeds the access token | Built + tested |
+| 8 | **Meta app type: Consumer** ("FBCM Ad Library Test"), not Business | The Business-type app could not issue user tokens in Graph API Explorer. This corrects research §3/§7.2 | Decided (observed by captain) |
+| 9 | Test brands are kept in `config/competitors.yaml`: Kapiva (IN, expected empty through the API), Forest Essentials UK (GB, Page ID `100331625781604`, unverified), Pukka Herbs (GB, fallback, Page ID unknown) | The UK pick is not final. Kapiva probes the India coverage gap | Open: captain confirms the UK brand |
+| 10 | Offline testability: a synthetic fixture API (`scripts/fixture_api.py`) plus `--fixture` / `--dry-run` modes, so the whole pipeline runs without Meta access | The captain's API access is pending identity review (about 48h) | Built |
+| 11 | `data/ads/`, `data/llm/` and `reports/<target>/` are git-ignored, not just `data/raw/` and `data/media/` | Normalized ads are still Platform Data (competitor copy). Keeping them out of git keeps the retention policy enforceable | Built. Revisit if the captain wants reports versioned |
+| 12 | Retention: raw pulls and LLM batches 180 days, media 90 days, reports kept. Enforced by `scripts/purge_expired.py` | Platform Terms §3.d. Research §5 | Built |
+
+## Deferred (out of Phase 0)
+
+- **Step-0 coverage spike with the Meta Ads MCP** (`https://mcp.facebook.com/ads`, tool `ads_library_search`): run it once access exists, to learn whether it returns non-EU (for example India-only) commercial ads. See README "Step 0". Not wired into the pipeline.
+- Creative and video analysis (Phase 1): per-ad, on-demand media download, kept for 90 days.
+- Similarity (Phase 2), own-account insights through the Ads MCP (Phase 3), and Messenger (Phase 4).
+
+## Open captain decisions (research §8)
+
+D3 (own ad account, read-only, in Phase 3), D4 (Claude billing route), D5 (personal vs client scope), D6 (creative policy: recommended per-ad on demand).

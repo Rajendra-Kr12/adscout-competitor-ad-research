@@ -1,0 +1,27 @@
+# Facebook CM Agent - agent rules
+
+A local Claude Code agent that analyses competitors' Meta ads through the official Ad Library API.
+Setup, usage and coverage caveats: `README.md`. Decisions: `docs/decisions.md`. Research: `docs/research/fbcm-research-r1.md`.
+
+## Hard rules
+
+- **Official Meta APIs only** (`ads_archive`, and later the Meta-hosted Ads MCP). Never scrape facebook.com or the Ad Library website, and never drive them with a browser agent (Claude in Chrome, computer use, Playwright, chrome-devtools), even "just to check". A human can look; the agent can't. Don't install third-party Ad Library scrapers or "Meta Ads MCP" proxies. See `docs/compliance.md`.
+- **`ad_snapshot_url` never leaves `data/raw/`**, because it embeds the access token. Outputs (`data/ads/`, `data/llm/`, `reports/`, chat) cite ads only as `https://www.facebook.com/ads/library/?id=<library_id>`. Nothing outside `data/raw/` or `.env` may contain `access_token`; `write_json` / `build_report.py` enforce this, so don't bypass them.
+- **Never commit** `.env`, `data/` contents or `reports/<target>/`. They are git-ignored, so keep it that way.
+- **Retention:** raw pulls and LLM batches 180 days, media 90 days, reports kept. Use `scripts/purge_expired.py`.
+- **Creative media (Phase 1, not built):** download only per ad, on demand, and only for analysis. No bulk mirroring.
+- Never present competitor spend, CPM, CPA or ROAS. They are not available from official sources.
+
+## Working here
+
+- Python venv: `.venv/bin/python`. Tests: `.venv/bin/python -m pytest -q`. The tests are fully offline and use synthetic fixtures (`tests/fixtures/`, `scripts/fixture_api.py`).
+- Without a token, use `--dry-run` (request plan) or `--fixture tests/fixtures/ads_archive_synthetic.json`.
+- Deterministic numbers come from scripts. Judgement comes from the sub-agents in `.claude/agents/`, and their output is validated against `schemas/ad.schema.json`. If you change a prompt in `prompts/`, bump its version (`extract-v1`).
+- Test brands and Page IDs live in `config/competitors.yaml`, not in code.
+
+## Maintaining this file
+
+Keep this file for knowledge useful to almost every future agent session in this project.
+Do not repeat what the codebase already shows; point to the authoritative file or command instead.
+Prefer rewriting or pruning existing entries over appending new ones.
+When updating this file, preserve this bar for all agents and keep entries concise.

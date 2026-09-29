@@ -6,7 +6,7 @@ argument-hint: <competitor-key | page-id | "search terms"> <since YYYY-MM>..<unt
 
 # /analyze-competitor
 
-Read the project `CLAUDE.md` first; its rules override anything here. In short: official APIs
+Read the project `AGENTS.md` first; its rules override anything here. In short: official APIs
 only, no browsing of facebook.com, and no snapshot URLs or tokens in outputs.
 
 Use `.venv/bin/python` (see README "Setup"). `<target>` is the competitor key from

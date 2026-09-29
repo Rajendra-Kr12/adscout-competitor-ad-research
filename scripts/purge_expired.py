@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce the retention policy (CLAUDE.md, docs/compliance.md).
+"""Enforce the retention policy (AGENTS.md, docs/compliance.md).
 
 data/raw/ and data/llm/: 180 days. data/media/: 90 days. Age is file mtime.
 Dry run by default; pass --apply to delete.

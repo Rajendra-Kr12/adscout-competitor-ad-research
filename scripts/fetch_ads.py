@@ -3,7 +3,7 @@
 
 Writes verbatim API records to data/raw/<target>/<run_id>.jsonl. Raw files contain
 ad_snapshot_url values that embed the access token, so data/raw/ is git-ignored and
-retention-limited (see CLAUDE.md). Nothing here touches facebook.com pages.
+retention-limited (see AGENTS.md). Nothing here touches facebook.com pages.
 
 Examples:
   python scripts/fetch_ads.py --competitor forest-essentials-uk --since 2025-10 --until 2026-09
