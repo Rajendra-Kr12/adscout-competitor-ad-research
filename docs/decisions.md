@@ -19,6 +19,9 @@ Newest first. Each entry records the decision, why it was made, and the status.
 | 23 | Keyword queries send `search_type`, defaulting to `KEYWORD_EXACT_PHRASE`. The fixture now follows the API: `KEYWORD_UNORDERED` (the API default) matches each word separately | Phase 0 sent no `search_type`, and the fixture pretended an exact match, so tests missed the Explorer behaviour | Built + tested |
 | 24 | `.gitignore` ignores `data/*` except `.gitkeep`, plus `logs/` | `data/state`, `data/runs` and `logs` were committable | Built |
 | 25 | The guard's event log is `data/state/guard/events.jsonl` (token-scrubbed), not `logs/guard.log` | Keeps all guard state under one ignored folder, and lets tests use a temporary data dir. `logs/` is reserved for launchd output (P1-12) | Built |
+| 26 | **P1-03: token lifecycle.** `token_store.py` has two backends, `.env` (0600 enforced) and macOS Keychain (`security -i`, so the token never goes on argv). **`.env` stays active**; the current token was not migrated. `token_cli.py rotate --to keychain` exists but has not been run | C2 (Keychain vs `.env`) is still an open captain decision | Built + tested |
+| 27 | `token_cli.py status` uses `debug_token` (input and access token = the user token), cached 24 h in `data/state/guard/token.json` (metadata only, no `user_id`), with warnings at 14/7/3 days. An invalid token trips the kill switch. A permission error from `debug_token` itself does not | Plan §6.1. A permission denial there means the endpoint can't introspect, not that the account is at risk | Built + tested |
+| 28 | `rotate` refuses to run without an interactive terminal, and bypasses only the kill switch (caps and cooldowns still apply), because rotating is how a token kill is resolved | Secrets must not pass through Claude; a dead token must not block its own replacement | Built + tested |
 
 ## 2026-09-29 - Phase 0 build
 

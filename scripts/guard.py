@@ -48,7 +48,7 @@ DEFAULTS = {
         "transient_retries": 3, "transient_delays_s": [2, 8, 30], "max_pages_per_query": 50,
         "breaker_failures": 5, "breaker_cooldown_min": 15,
     },
-    "token": {"warn_days": [14, 7, 3], "status_cache_hours": 24},
+    "token": {"store": "env", "warn_days": [14, 7, 3], "status_cache_hours": 24},
 }
 
 KILL_HINTS = {
@@ -149,8 +149,12 @@ def usage_from_headers(headers) -> tuple[dict[str, float], float]:
 
 class Guard:
     def __init__(self, data_dir: Path = DATA_DIR, config: dict | None = None, *, live: bool = True,
-                 clock=time.time, sleep=time.sleep, log=None, env=None, jitter=random.uniform):
+                 clock=time.time, sleep=time.sleep, log=None, env=None, jitter=random.uniform,
+                 respect_kill: bool = True):
+        """respect_kill=False is only for `token_cli.py rotate`, run by a human at a terminal:
+        replacing a dead or leaked token is how a token kill is resolved. Caps and cooldowns still apply."""
         self.cfg = config or load_config()
+        self.respect_kill = respect_kill
         self.api = self.cfg["api"]
         self.live = live
         self.data_dir = Path(data_dir)
@@ -235,7 +239,7 @@ class Guard:
     # --- preflight and lock -------------------------------------------------
 
     def preflight(self) -> None:
-        if reason := self.kill_reason():
+        if self.respect_kill and (reason := self.kill_reason()):
             raise GuardStop(f"kill switch is on: {reason}. Only a human can clear it "
                             "(python scripts/guard.py unkill in a terminal).", "kill")
         if self.live and (cd := self.cooldown()):
@@ -333,15 +337,20 @@ class Guard:
             self.log(f"{name} at {peak:.0f}%, pausing {self.api['usage_soft_sleep_s']}s")
             self.sleep(self.api["usage_soft_sleep_s"])
 
-    def after_failure(self, *, code=None, subcode=None, status=None, headers=None, message: str = "") -> None:
-        """Record a failed call; trip the kill switch, cool down or open the breaker as policy says."""
+    def after_failure(self, *, code=None, subcode=None, status=None, headers=None, message: str = "",
+                      soft_kinds: tuple[str, ...] = ()) -> None:
+        """Record a failed call; trip the kill switch, cool down or open the breaker as policy says.
+
+        soft_kinds: kill reasons that only fail this call (debug_token may deny introspection
+        with a permission error without the account being at risk).
+        """
         if self.ledger is not None:
             self.ledger["errors"].append({"code": code, "subcode": subcode, "http_status": status})
         peaks, eta = usage_from_headers(headers)
         if self.ledger is not None:
             for k, v in peaks.items():
                 self.ledger["usage_peak"][k] = max(v, self.ledger["usage_peak"].get(k, 0))
-        if kind := classify_error(code, subcode):
+        if (kind := classify_error(code, subcode)) and kind not in soft_kinds:
             self.kill(f"Graph error {code}" + (f"/{subcode}" if subcode else "") + f": {KILL_HINTS[kind]}",
                       kind=kind, code=code, subcode=subcode)
             return

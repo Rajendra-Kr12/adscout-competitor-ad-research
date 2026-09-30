@@ -32,7 +32,7 @@ Background: `docs/research/fbcm-research-r1.md` (sections 2, 4-7). Decisions: `d
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-cp .env.example .env      # then fill in; .env is git-ignored
+cp .env.example .env && chmod 600 .env   # then fill in; .env is git-ignored and must stay 0600
 .venv/bin/python -m pytest -q
 ```
 
@@ -51,20 +51,38 @@ cp .env.example .env      # then fill in; .env is git-ignored
 
 ### Long-lived token (about 60 days)
 
-The Explorer's token expires in about an hour. Exchange it from your Mac, never in a browser:
+The Explorer's token expires in about an hour. Exchange it for a long-lived one **in your own Terminal
+tab, never in a Claude chat**:
 
 ```bash
-META_APP_ID=<your app id>
-read -s SHORT_TOKEN; read -s APP_SECRET   # paste each, press Enter (not echoed, not in history)
-curl -sG "https://graph.facebook.com/v26.0/oauth/access_token" \
-  --data-urlencode grant_type=fb_exchange_token \
-  --data-urlencode client_id="$META_APP_ID" \
-  --data-urlencode client_secret="$APP_SECRET" \
-  --data-urlencode fb_exchange_token="$SHORT_TOKEN"
+.venv/bin/python scripts/token_cli.py rotate                 # store in the active store (.env by default)
+.venv/bin/python scripts/token_cli.py rotate --to keychain   # or the macOS Keychain (see "Token store")
 ```
 
-Put the returned `access_token` into `.env` as `META_ACCESS_TOKEN`, along with `META_APP_ID` and
-`META_API_VERSION=v26.0`. Repeat this before the token expires. When it has expired, the API returns error **190**.
+It asks for the short-lived Explorer token and the App Secret without echoing them, calls
+`oauth/access_token?grant_type=fb_exchange_token` through the guard, stores the result, and prints only
+its fingerprint and expiry. The App Secret is never stored. `.env` also holds `META_APP_ID` and
+`META_API_VERSION=v26.0`. Repeat before the token expires (about every 60 days). An expired token
+gives error **190** and trips the kill switch; rotating works even while it is on.
+
+```bash
+.venv/bin/python scripts/token_cli.py status      # fingerprint, validity, expiry, days left (never the token)
+.venv/bin/python scripts/token_cli.py scan [PATH]  # files holding the token or a token-shaped string (paths only)
+```
+
+`status` calls `debug_token` at most once a day (`--refresh` forces it), caches metadata only in
+`data/state/guard/token.json`, and warns 14, 7 and 3 days before expiry. Live fetches run the same
+check first.
+
+### Token store
+
+`scripts/token_store.py` is the only code that reads the token. The active store is `.env` (the
+default, `token.store` in `config/guard.yaml`), which must be mode 0600 or it is refused. The macOS
+Keychain backend (service `fbcm.meta`, account `user_token`) is built but not active: choosing it is an
+open captain decision (C2). `rotate --to keychain` switches to it and leaves the `.env` line for you to
+remove. `FBCM_TOKEN_STORE=env|keychain` or a `META_ACCESS_TOKEN` environment variable override the
+choice for one command. Never copy the token to a second machine or a cloud routine: Meta warns that
+reusing one long-lived token across clients can trigger its spam systems.
 
 ### Error meanings
 

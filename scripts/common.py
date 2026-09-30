@@ -25,8 +25,10 @@ EU_UK = frozenset({
     "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "GB",
 })
 
-# access_token=<value> in a URL or text; also bare "access_token": "<value>" JSON keys.
-_TOKEN_RE = re.compile(r"(access_token=)[^&\s\"']+", re.IGNORECASE)
+# access_token=<value> in a URL or text, plus the other secret-bearing Graph parameters
+# used by debug_token (input_token) and the long-lived exchange (client_secret, fb_exchange_token).
+_TOKEN_RE = re.compile(r"((?:access_token|input_token|client_secret|fb_exchange_token)=)[^&\s\"']+",
+                       re.IGNORECASE)
 # The whole access_token query parameter, with its leading ? or & and any trailing &.
 _TOKEN_PARAM_RE = re.compile(r"([?&])access_token=[^&\s\"']*(&?)", re.IGNORECASE)
 

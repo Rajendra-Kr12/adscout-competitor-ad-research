@@ -19,5 +19,6 @@ api:
   breaker_cooldown_min: 15
 
 token:
+  store: env                   # env (.env, 0600) or keychain (macOS Keychain "fbcm.meta"); see token_store.py
   warn_days: [14, 7, 3]        # expiry warnings (token_cli.py status)
   status_cache_hours: 24       # debug_token is called at most this often by preflight

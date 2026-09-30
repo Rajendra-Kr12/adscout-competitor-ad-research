@@ -15,11 +15,26 @@ Basis: Meta Terms §3.2 ("You may not access or collect data from our Products u
 
 ## Tokens and secrets
 
-- `META_ACCESS_TOKEN` lives only in `.env` (git-ignored). `.env.example` holds empty placeholders.
+- The token lives in one store: `.env` (git-ignored, must be 0600, the default) or the macOS Keychain (`fbcm.meta` / `user_token`). Only `scripts/token_store.py` reads it; everything else sees its fingerprint (sha256[:8]). `.env.example` holds empty placeholders.
+- The App Secret is typed into `token_cli.py rotate` and never stored. `client_secret`, `fb_exchange_token` and `input_token` are scrubbed from error messages like `access_token`.
+- One Mac only. Do not reuse the long-lived token on another machine or in a cloud routine (Meta's long-lived token guide: "Do not use the same long-lived tokens on more than one web client").
 - The API returns `ad_snapshot_url` with the access token embedded. `fetch_ads.py` strips the `access_token` parameter **before** writing `data/raw/` and refuses to write any line that still contains it. Raw files are created 0600. The snapshot URL itself is kept **only** in `data/raw/`. It is never written to `data/ads/`, `data/llm/`, reports or chat output. `scripts/common.py:write_json` and `build_report.py` refuse to write any text containing `access_token`, and `tests/test_pipeline.py` asserts this.
 - Error messages are token-scrubbed before they are printed.
 - Reports cite ads only by the public permalink `https://www.facebook.com/ads/library/?id=<library_id>`.
 - `reports/<target>/<date>-ads.csv` carries each ad's full text, so it is Platform Data like the report: git-ignored, private, and written only through the same `access_token` check.
+
+## Token leak runbook
+
+If the token may have leaked (pasted in chat, committed, shared, or found by `token_cli.py scan`):
+
+1. `.venv/bin/python scripts/guard.py kill "suspected leak"`. Every run stops.
+2. Revoke it: remove the FBCM app under Facebook Settings > Apps and websites (a human does this on facebook.com). Its user tokens stop working (190/458).
+3. Mint a new Explorer token and run `.venv/bin/python scripts/token_cli.py rotate` in your own Terminal.
+4. Find copies: `.venv/bin/python scripts/token_cli.py scan . ~/.claude/projects logs` lists files holding the token or a token-shaped string, by path only. Clean them.
+5. If Platform Data was exposed, report it through the Platform Terms §6.b incident process.
+6. `.venv/bin/python scripts/guard.py unkill` (interactive confirmation).
+
+Losing the token (rather than leaking it) is low impact: mint a new one and rotate.
 
 ## Request volume (Graph API rate limiting; Platform Terms §7.e)
 

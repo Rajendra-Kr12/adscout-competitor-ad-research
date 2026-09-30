@@ -29,6 +29,7 @@ import requests
 from common import (
     DATA_DIR,
     DEFAULT_API_VERSION,
+    ROOT,
     EU_UK,
     assert_no_token,
     iso_z,
@@ -41,6 +42,7 @@ from common import (
     utc_now,
 )
 from guard import THROTTLE_CODES, TRANSIENT_CODES, Guard, GuardStop, classify_error
+from token_store import TokenStoreError, get_token
 
 FIELDS = [
     "id", "page_id", "page_name", "ad_creation_time", "ad_delivery_start_time",
@@ -76,9 +78,10 @@ class GraphTransport:
     """
 
     def __init__(self, session=None, *, guard: Guard | None = None, retries: int = 3,
-                 delays=(2, 8, 30), sleep=time.sleep, log=None):
+                 delays=(2, 8, 30), sleep=time.sleep, log=None, soft_kinds: tuple[str, ...] = ()):
         self.session = session or requests.Session()
         self.guard = guard
+        self.soft_kinds = soft_kinds
         self.retries, self.delays = retries, list(delays)
         self.sleep = sleep
         self.log = log or (lambda msg: print(scrub_tokens(msg), file=sys.stderr))
@@ -114,7 +117,7 @@ class GraphTransport:
                                        code, subcode)
             if self.guard:
                 self.guard.after_failure(code=code, subcode=subcode, status=status, headers=headers,
-                                         message=str(err))
+                                         message=str(err), soft_kinds=self.soft_kinds)
             fatal = code in THROTTLE_CODES or classify_error(code, subcode) is not None
             transient = code in TRANSIENT_CODES or status is None or status >= 500
             if fatal or not transient or attempt >= min(self.retries, len(self.delays)):
@@ -326,6 +329,16 @@ def _fetch_windows(out: Path, header: dict, planned: list[str], windows, media_t
     return {"stopped": stopped, "total": total, "unique": unique, "missing": missing}
 
 
+def check_token_status(token: str, guard: Guard, api_version: str, data_dir: Path) -> None:
+    """Daily debug_token check with expiry warnings. Only a kill-switch outcome blocks the fetch."""
+    from token_cli import ensure_status
+    t = GraphTransport(guard=guard, retries=0, soft_kinds=("permission",))
+    try:
+        ensure_status(token, guard, t, api_version, data_dir)
+    except MetaApiError as exc:
+        print(f"token status check failed (continuing): {exc}", file=sys.stderr)
+
+
 def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     src = ap.add_argument_group("target")
@@ -347,11 +360,13 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
     ap.add_argument("--limit", type=int, default=500, help="page size (API max 5000)")
     ap.add_argument("--out-key", help="folder name under data/raw (default: competitor key or page id)")
     ap.add_argument("--data-dir", type=Path, default=DATA_DIR)
+    ap.add_argument("--env-file", type=Path, default=ROOT / ".env",
+                    help="the .env token store and API version (default: the project .env)")
     ap.add_argument("--dry-run", action="store_true", help="print the request plan and exit")
     ap.add_argument("--fixture", type=Path, help="serve responses from a synthetic fixture (offline)")
     args = ap.parse_args(argv)
 
-    env = load_env()
+    env = load_env(args.env_file)
     api_version = env.get("META_API_VERSION") or DEFAULT_API_VERSION
     target = resolve_target(args, load_competitors())
     media_types = [m.strip().upper() for m in args.media_types.split(",") if m.strip()]
@@ -377,6 +392,7 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
               f"{c['day']}/{g.api['max_calls_per_day']} used in 24h.", file=sys.stderr)
         return 0
 
+    check_token = False
     if transport is not None:  # injected (tests)
         token, mode = "TEST-NOT-A-REAL-TOKEN", "live"
         guard = guard or Guard(args.data_dir)
@@ -385,17 +401,24 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
         guard = guard or Guard(args.data_dir, live=False)
         transport, token, mode = GuardedFixture(FixtureTransport(args.fixture), guard), "FIXTURE-NOT-A-REAL-TOKEN", "fixture"
     else:
-        token = env.get("META_ACCESS_TOKEN")
-        if not token:
-            sys.exit("META_ACCESS_TOKEN missing. Copy .env.example to .env (see README), "
-                     "or use --dry-run / --fixture.")
         guard = guard or Guard(args.data_dir)
+        try:
+            token, source = get_token(guard.cfg, args.data_dir, env_path=args.env_file)
+        except TokenStoreError as exc:
+            sys.exit(f"token store: {exc}")
+        if not token:
+            sys.exit(f"No Meta token in the {source} store. See README 'Long-lived token' "
+                     "(scripts/token_cli.py), or use --dry-run / --fixture.")
         transport, mode = GraphTransport(guard=guard, retries=guard.api["transient_retries"],
                                          delays=guard.api["transient_delays_s"]), "live"
+        check_token = True
 
     try:
         with guard.lock():
             guard.preflight()
+            if check_token:
+                check_token_status(token, guard, api_version, args.data_dir)
+                guard.preflight()  # debug_token may have tripped the kill switch
             return run_fetch(target=target, windows=windows, media_types=media_types, since=args.since,
                              until=args.until, limit=args.limit, transport=transport, token=token, mode=mode,
                              api_version=api_version, guard=guard, data_dir=args.data_dir)
