@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Refuse commits that stage secrets or Platform Data.
+
+Enable once per clone:  git config core.hooksPath .githooks
+
+Blocks staged:
+- .env / .env.* (except .env.example), anything under data/ (except data/.gitkeep),
+  reports/<target>/ and logs/;
+- content with a Meta user-token-shaped string (EAA + 20 or more letters/digits) or an
+  access_token= followed by a long real-looking value.
+Only file names and line numbers are printed, never the matched text.
+"""
+import re
+import subprocess
+import sys
+
+TOKEN_RES = (re.compile(rb"EAA[A-Za-z0-9]{20,}"), re.compile(rb"access_token=[A-Za-z0-9]{40,}", re.IGNORECASE))
+
+
+def blocked_path(path: str) -> str | None:
+    name = path.rsplit("/", 1)[-1]
+    if name == ".env" or (name.startswith(".env.") and name != ".env.example"):
+        return "secrets file"
+    if path.startswith("data/") and path != "data/.gitkeep":
+        return "Platform Data / guard state under data/"
+    if path.startswith("reports/") and path != "reports/.gitkeep":
+        return "generated report (Platform Data)"
+    if path.startswith("logs/"):
+        return "log file"
+    return None
+
+
+def main() -> int:
+    names = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
+                           capture_output=True, check=True).stdout.decode().split("\0")
+    problems = []
+    for path in filter(None, names):
+        if why := blocked_path(path):
+            problems.append(f"{path}: {why}")
+            continue
+        blob = subprocess.run(["git", "show", f":{path}"], capture_output=True).stdout
+        for n, line in enumerate(blob.splitlines(), 1):
+            if any(r.search(line) for r in TOKEN_RES):
+                problems.append(f"{path}:{n}: looks like a Meta access token")
+    if problems:
+        print("pre-commit: refusing to commit (see AGENTS.md, docs/compliance.md):", file=sys.stderr)
+        for p in problems:
+            print(f"  {p}", file=sys.stderr)
+        print("If a token was staged, treat it as leaked: docs/compliance.md 'Token leak runbook'.", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

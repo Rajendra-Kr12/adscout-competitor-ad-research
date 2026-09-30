@@ -23,6 +23,18 @@ Basis: Meta Terms §3.2 ("You may not access or collect data from our Products u
 - Reports cite ads only by the public permalink `https://www.facebook.com/ads/library/?id=<library_id>`.
 - `reports/<target>/<date>-ads.csv` carries each ad's full text, so it is Platform Data like the report: git-ignored, private, and written only through the same `access_token` check.
 
+## Agent guardrails
+
+The rules above are also enforced on Claude Code tool calls, not only written down:
+
+- `.claude/settings.json` holds permission deny rules. It denies reading `.env` and `data/raw/`, WebFetch to facebook.com and fbcdn.net, Claude in Chrome, and `lavish-axi share`.
+- `.claude/hooks/guard_pretool.py` is a PreToolUse hook. It catches what the deny rules can't:
+  - network commands and browser MCPs aimed at facebook.com or fbcdn.net (`graph.` and `developers.facebook.com` are allowed);
+  - `access_token=` in any Bash, WebFetch or MCP input, and Keychain token reads;
+  - `.env` reads by other programs;
+  - third-party Meta Ads MCP installs.
+- `.githooks/pre-commit` refuses secrets, Platform Data and token-shaped strings at commit time. It prints file and line only, never the match.
+
 ## Token leak runbook
 
 If the token may have leaked (pasted in chat, committed, shared, or found by `token_cli.py scan`):

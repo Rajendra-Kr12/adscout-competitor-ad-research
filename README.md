@@ -34,6 +34,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env && chmod 600 .env   # then fill in; .env is git-ignored and must stay 0600
 .venv/bin/python -m pytest -q
+git config core.hooksPath .githooks   # once per clone: enables the pre-commit token/data check
 ```
 
 ### Meta access (one-time, captain)
@@ -118,6 +119,22 @@ $PY scripts/guard.py clear-cooldown      # human only, same confirmation
 A run that stops early leaves a raw file without its summary line. `normalize.py` refuses it unless
 you pass `--allow-partial`, and the ledger lists the missing windows.
 
+## Agent guardrails
+
+- `.claude/settings.json` (committed) denies reading `.env` and `data/raw/`, WebFetch to facebook.com
+  and fbcdn.net, Claude in Chrome, and `lavish-axi share`. It also registers the PreToolUse hook.
+- `.claude/hooks/guard_pretool.py` checks every tool call. It blocks:
+  - facebook.com and fbcdn.net access by WebFetch, browser MCPs or network commands (`graph.` and `developers.facebook.com` are allowed);
+  - any Bash, WebFetch or MCP input containing `access_token=`, and Keychain token reads;
+  - `.env` and direct `data/raw/` reads;
+  - `lavish-axi share`;
+  - `claude mcp add` of third-party Meta Ads MCP servers.
+
+  It uses the standard library only (`python3`), so it works without the venv. Edit and Write are not
+  checked, so docs that mention `access_token=` are edited with those tools rather than shell heredocs.
+- `.githooks/pre-commit` refuses staged `.env`, `data/`, `reports/<target>/` or `logs/` files, and any
+  content that looks like a Meta token (`EAA...`). Enable it with `git config core.hooksPath .githooks`.
+
 ## Usage
 
 In Claude Code: `/analyze-competitor forest-essentials-uk 2025-10..2026-09`
@@ -185,6 +202,8 @@ Settings > Integrations > Ads MCP server.
 config/competitors.yaml      test brands (UK pick not final)
 schemas/ad.schema.json       per-ad schema v0.2 (research §7.3; additive over v0.1)
 config/guard.yaml            API guard caps and thresholds
+.claude/settings.json        permission deny rules + PreToolUse hook (.claude/hooks/guard_pretool.py)
+.githooks/pre-commit         token / Platform Data commit check
 scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report template (versioned)

@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./data/raw/**)",
+      "WebFetch(domain:www.facebook.com)",
+      "WebFetch(domain:facebook.com)",
+      "WebFetch(domain:m.facebook.com)",
+      "WebFetch(domain:web.facebook.com)",
+      "WebFetch(domain:fbcdn.net)",
+      "mcp__claude-in-chrome__*",
+      "Bash(lavish-axi share*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard_pretool.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

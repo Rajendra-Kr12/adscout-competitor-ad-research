@@ -28,6 +28,7 @@ from token_store import (
 TOKEN = "EAA" + "Synthetic0Test0Token0Value0Not0Real" * 2
 NEW_TOKEN = "EAA" + "Rotated0Synthetic0Token0Not0Real" * 2
 SECRET = "synthetic0app0secret0value"
+SHORT_TOKEN = "EAA" + "shortLivedSyntheticToken0000000"
 
 FAKE_SECURITY = r'''import json, os, shlex, sys
 store = os.environ["FAKE_KEYCHAIN"]
@@ -215,7 +216,7 @@ def test_rotate_refuses_without_a_terminal(tmp_path, env_file, capsys):
 
 def test_rotate_to_keychain_stores_new_token_and_leaves_env(tmp_path, env_file, security, monkeypatch, capsys):
     monkeypatch.setenv("FBCM_SECURITY_BIN", security)
-    answers = iter(["EAAshortLivedSyntheticToken0000000", SECRET])
+    answers = iter([SHORT_TOKEN, SECRET])
     g = FakeGraph(expires_in_days=60)
     args = ns(tmp_path, env_file)
     args.to = "keychain"
@@ -234,7 +235,7 @@ def test_rotate_to_keychain_stores_new_token_and_leaves_env(tmp_path, env_file, 
 
 def test_rotate_works_while_killed_for_token(tmp_path, env_file, capsys):
     Guard(tmp_path / "data", env={}).kill("token dead", kind="token")
-    answers = iter(["EAAshortLivedSyntheticToken0000000", SECRET])
+    answers = iter([SHORT_TOKEN, SECRET])
     rc = token_cli.cmd_rotate(ns(tmp_path, env_file), load_config(), stdin=TTY(), prompt=lambda _: next(answers),
                               transport=FakeGraph(expires_in_days=60))
     assert rc == 0 and EnvFileStore(env_file).get() == NEW_TOKEN
