@@ -19,6 +19,7 @@ Basis: Meta Terms §3.2 ("You may not access or collect data from our Products u
 - `ad_snapshot_url` embeds the access token, so it is kept **only** in `data/raw/`. It is never written to `data/ads/`, `data/llm/`, reports or chat output. `scripts/common.py:write_json` and `build_report.py` refuse to write any text containing `access_token`, and `tests/test_pipeline.py` asserts this.
 - Error messages are token-scrubbed before they are printed.
 - Reports cite ads only by the public permalink `https://www.facebook.com/ads/library/?id=<library_id>`.
+- `reports/<target>/<date>-ads.csv` carries each ad's full text, so it is Platform Data like the report: git-ignored, private, and written only through the same `access_token` check.
 
 ## Retention (Platform Terms §3.d)
 
@@ -28,7 +29,7 @@ Basis: Meta Terms §3.2 ("You may not access or collect data from our Products u
 | LLM batch inputs and outputs | `data/llm/` | 180 days |
 | Creative media (Phase 1) | `data/media/` | 90 days |
 | Normalized ads | `data/ads/` | While the analysis is in use. Re-derivable from raw |
-| Reports (analysis) | `reports/` | Kept |
+| Reports (analysis, including `-ads.csv`) | `reports/` | Kept |
 
 Run `.venv/bin/python scripts/purge_expired.py` for a dry run, then add `--apply` to delete. Also delete data when Meta asks, or when the project stops.
 

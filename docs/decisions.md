@@ -2,6 +2,16 @@
 
 Newest first. Each entry records the decision, why it was made, and the status.
 
+## 2026-09-30 - Phase 1 M1 "safe + visible" (plan: firstmate `fbcm-p1-plan`, captain "go")
+
+| # | Decision | Why | Status |
+|---|---|---|---|
+| 13 | **P1-01: the report shows every API sub-element per ad** (full deduped primary text, headline, description, caption, platforms, languages, dates, UK/EU reach, age x gender, targeting, payer) as "Ad details" cards, plus `reports/<target>/<date>-ads.csv` | The captain had not seen the sub-elements; Phase 0 stored them but printed only an 80-char first line | Built + tested |
+| 14 | Schema v0.2 is additive: `derived.text_status` (`has_text` / `creative-only`), `derived.variants_unique`, `derived.uk_reach` (`value` + `basis`), `derived.reach_by_country`. Older files are upgraded in memory (`text_metrics.upgrade_ad`) and rewritten on the next normalize | Deterministic values belong in `derived`, which is recomputed from `text` and `eu_metrics`, so no refetch is needed | Built |
+| 15 | UK reach = `total_reach_by_location["UK"]`; if absent, the sum of the GB age x gender breakdown, labelled "breakdown sum" | UK-only ads carry no `eu_total_reach`, so Phase 0 showed no reach for UK advertisers | Built |
+| 16 | Countries come from the run header, config or `--country`, never code. A query limited to non-EU/UK countries that returns 0 ads gets a plain coverage statement in the fetch output and the report | Captain: "Not just uk.. i should be able to ask any country" | Built |
+| 17 | CTA button, images, video, on-image text and full landing URL are not in `ads_archive`; they are left to the Phase 1 visuals ladder (plan §3.3, decision C5) | ArchivedAd v26.0 reference | Noted |
+
 ## 2026-09-29 - Phase 0 build
 
 | # | Decision | Why | Status |

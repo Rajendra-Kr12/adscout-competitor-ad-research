@@ -766,6 +766,258 @@
     "media_type": "VIDEO"
    },
    "ad_delivery_stop_time": "2026-06-01"
+  },
+  {
+   "id": "990000000000301",
+   "page_id": "900000000000003",
+   "page_name": "Synthetic Multi-market Botanicals (FIXTURE)",
+   "ad_creation_time": "2026-08-18",
+   "ad_delivery_start_time": "2026-08-20",
+   "ad_creative_bodies": [
+    "Meet Rose Glow, our overnight serum.\nCold-pressed rosehip with 3% bakuchiol.\nWake up to softer skin, or your money back.",
+    "Meet Rose Glow, our overnight serum.\nCold-pressed rosehip with 3% bakuchiol.\nWake up to softer skin, or your money back.",
+    "Meet Rose Glow, our overnight serum.\nCold-pressed rosehip with 3% bakuchiol.\nWake up to softer skin, or your money back."
+   ],
+   "ad_creative_link_titles": [
+    "Rose Glow Overnight Serum",
+    "Rose Glow Overnight Serum",
+    "Rose Glow Overnight Serum"
+   ],
+   "ad_creative_link_descriptions": [
+    "30-night money-back promise"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-botanicals.example"
+   ],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK",
+    "INSTAGRAM",
+    "MESSENGER"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "VIDEO",
+    "note": "GB-only delivery: no eu_total_reach; UK reach via total_reach_by_location, keyed GB as the live API returns it"
+   },
+   "total_reach_by_location": [
+    {
+     "key": "GB",
+     "value": 52000
+    }
+   ],
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "25-34",
+       "male": 1200,
+       "female": 21800,
+       "unknown": 150
+      },
+      {
+       "age_range": "35-44",
+       "male": 900,
+       "female": 18400,
+       "unknown": 100
+      },
+      {
+       "age_range": "45-54",
+       "male": 300,
+       "female": 6900,
+       "unknown": 50
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "25",
+    "54"
+   ],
+   "target_gender": "Women",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    },
+    {
+     "name": "Northern Ireland",
+     "num_obfuscated": 0,
+     "type": "regions",
+     "excluded": true
+    }
+   ]
+  },
+  {
+   "id": "990000000000302",
+   "page_id": "900000000000003",
+   "page_name": "Synthetic Multi-market Botanicals (FIXTURE)",
+   "ad_creation_time": "2026-07-01",
+   "ad_delivery_start_time": "2026-07-01",
+   "ad_creative_bodies": [],
+   "ad_creative_link_titles": [],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [],
+   "languages": [],
+   "publisher_platforms": [
+    "INSTAGRAM"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "GB"
+    ],
+    "media_type": "VIDEO",
+    "note": "creative-only ad (no text); UK reach only from the GB breakdown"
+   },
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "GB",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "18-24",
+       "male": 400,
+       "female": 3600,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "18",
+    "65+"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "United Kingdom",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ]
+  },
+  {
+   "id": "990000000000303",
+   "page_id": "900000000000003",
+   "page_name": "Synthetic Multi-market Botanicals (FIXTURE)",
+   "ad_creation_time": "2026-06-10",
+   "ad_delivery_start_time": "2026-06-12",
+   "ad_delivery_stop_time": "2026-07-12",
+   "ad_creative_bodies": [
+    "Sommerpflege mit Rosenöl.\nJetzt 15% Rabatt mit Code SOMMER15."
+   ],
+   "ad_creative_link_titles": [
+    "Rosenöl-Serum"
+   ],
+   "ad_creative_link_descriptions": [
+    "Gratis Versand ab 40 €"
+   ],
+   "ad_creative_link_captions": [
+    "synthetic-botanicals.example"
+   ],
+   "languages": [
+    "de"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "DE",
+     "AT"
+    ],
+    "media_type": "IMAGE",
+    "note": "EU delivery: eu_total_reach + beneficiary_payers"
+   },
+   "eu_total_reach": 15000,
+   "total_reach_by_location": [
+    {
+     "key": "EU",
+     "value": 15000
+    }
+   ],
+   "age_country_gender_reach_breakdown": [
+    {
+     "country": "DE",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "35-44",
+       "male": 500,
+       "female": 9500,
+       "unknown": 0
+      }
+     ]
+    },
+    {
+     "country": "AT",
+     "age_gender_breakdowns": [
+      {
+       "age_range": "35-44",
+       "male": 200,
+       "female": 4800,
+       "unknown": 0
+      }
+     ]
+    }
+   ],
+   "target_ages": [
+    "30",
+    "55"
+   ],
+   "target_gender": "All",
+   "target_locations": [
+    {
+     "name": "Germany",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    },
+    {
+     "name": "Austria",
+     "num_obfuscated": 0,
+     "type": "countries",
+     "excluded": false
+    }
+   ],
+   "beneficiary_payers": [
+    {
+     "payer": "Synthetic Botanicals GmbH",
+     "beneficiary": "Synthetic Botanicals GmbH"
+    }
+   ]
+  },
+  {
+   "id": "990000000000304",
+   "page_id": "900000000000003",
+   "page_name": "Synthetic Multi-market Botanicals (FIXTURE)",
+   "ad_creation_time": "2026-05-01",
+   "ad_delivery_start_time": "2026-05-01",
+   "ad_creative_bodies": [
+    "US-only launch. Never returned by ads_archive (commercial, non-EU/UK)."
+   ],
+   "ad_creative_link_titles": [],
+   "ad_creative_link_descriptions": [],
+   "ad_creative_link_captions": [],
+   "languages": [
+    "en"
+   ],
+   "publisher_platforms": [
+    "FACEBOOK"
+   ],
+   "_fixture": {
+    "reached_countries": [
+     "US"
+    ],
+    "media_type": "IMAGE",
+    "note": "commercial ad delivered only outside the EU/UK: the API never returns it"
+   }
   }
  ]
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalize a raw ads_archive run into data/ads/<target>/<library_id>.json (schema v0.1).
+"""Normalize a raw ads_archive run into data/ads/<target>/<library_id>.json (schema v0.2).
 
 Only whitelisted fields are copied. ad_snapshot_url (which embeds the access token)
 never leaves data/raw/. Existing llm{} blocks are kept when an ad is re-normalized.
@@ -27,9 +27,8 @@ from common import (
     permalink,
     write_json,
 )
-from text_metrics import assign_near_duplicates, compute
+from text_metrics import SCHEMA_VERSION, assign_near_duplicates, compute, upgrade_ad
 
-SCHEMA_VERSION = "0.1"
 EU_FIELDS = ("eu_total_reach", "total_reach_by_location", "age_country_gender_reach_breakdown",
              "target_ages", "target_gender", "target_locations", "beneficiary_payers")
 POLITICAL_FIELDS = ("spend", "impressions", "currency", "demographic_distribution",
@@ -113,7 +112,7 @@ def normalize_ad(rec: dict, header: dict, media_hint: str | None, existing: dict
         "text": text,
         "eu_metrics": eu or None,
         "political_metrics": political or None,
-        "derived": compute(text),
+        "derived": compute(text, eu),
         "llm": llm,
         "creative": None,
         "provenance": {
@@ -145,7 +144,7 @@ def normalize_run(raw_path: Path, data_dir: Path = DATA_DIR, only_page_id: str |
     ads: dict[str, dict] = {}
     if out_dir.exists():
         for f in out_dir.glob("*.json"):
-            ads[f.stem] = json.loads(f.read_text())
+            ads[f.stem] = upgrade_ad(json.loads(f.read_text()))
     for lid, rec in latest.items():
         ads[lid] = normalize_ad(rec, header, hints.get(lid), ads.get(lid))
     assign_near_duplicates(list(ads.values()))

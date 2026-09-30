@@ -13,10 +13,16 @@ It never scrapes or automates facebook.com. See `AGENTS.md` and `docs/compliance
   Political and issue ads are covered worldwide for 7 years. An India-only brand (for example
   Kapiva) is **expected to return 0 ads**, even though the Ad Library website shows them.
   Every report states its coverage basis.
+- **Any country can be queried** (`--country` takes any ISO-2 code, repeatable). For a country
+  outside the EU/UK the report says plainly that the API only covers commercial ads delivered to
+  the EU/UK, so an empty result is coverage, not an error.
 - Competitor **spend, impressions, CPM, CPA, ROAS and engagement are not available** from any
-  official source. EU/UK-delivered ads carry reach and age/gender/country breakdowns.
-- Phase 0 is **text only**: ad copy, headlines, link descriptions and captions. Images, video
-  and on-image text come in Phase 1.
+  official source. UK/EU-delivered ads carry reach (UK reach from `total_reach_by_location`, else
+  the sum of the GB age x gender breakdown, labelled as such), age x gender breakdowns and targeting.
+  EU reach exists only for EU-delivered ads.
+- The analysis is **text only**: primary text, headlines, link descriptions and captions. The CTA
+  button label, images, video, on-image text and the full landing URL are **not in the API**.
+  Ads with no text are labelled `creative-only`.
 - "Days running" is a proxy for what works, not performance data.
 
 Background: `docs/research/fbcm-research-r1.md` (sections 2, 4-7). Decisions: `docs/decisions.md`.
@@ -91,6 +97,15 @@ results can include other Pages, so pass `--only-page-id` to `normalize.py`). Ad
 `--media-types IMAGE,VIDEO,MEME,NONE` to label media types. This costs one query per type.
 Competitors live in `config/competitors.yaml`.
 
+### What the report contains
+
+`reports/<target>/<date>-competitor-report.md` has the summary, per-month tables and ledger, then an
+**Ad details** card per ad: the full primary text (identical variants shown once with a `×n` count),
+headline, link description, caption, platforms, languages, dates, UK and EU reach, the age x gender
+table, targeting and beneficiary/payer. `reports/<target>/<date>-ads.csv` has one row per ad with the
+same fields plus the LLM columns (cells starting with `= + - @` are prefixed with `'` so spreadsheets
+never run them as formulas).
+
 ### Offline demo (no token needed)
 
 ```bash
@@ -103,6 +118,8 @@ $PY scripts/build_report.py --target synthetic-uk --since 2026-01 --until 2026-0
 
 The fixture is **synthetic**: made-up pages, IDs, copy and reach, in the `ads_archive` response
 shape. The India-only fixture Page (`--page-id 900000000000002 --country IN`) returns 0 ads, the same way the real API does.
+Page `900000000000003` has a GB-only ad (UK reach, no EU reach), a `creative-only` ad, a DE/AT ad
+(`--country DE`) and a US-only ad that is never returned (`--country US` shows the coverage message).
 
 ## Step 0 coverage spike (run once access exists; not automated)
 
@@ -122,14 +139,14 @@ Settings > Integrations > Ads MCP server.
 
 ```
 config/competitors.yaml      test brands (UK pick not final)
-schemas/ad.schema.json       per-ad schema v0.1 (research §7.3)
+schemas/ad.schema.json       per-ad schema v0.2 (research §7.3; additive over v0.1)
 scripts/                     fetch_ads, normalize, text_metrics, llm_batches, build_report,
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report template (versioned)
 .claude/agents/              ad-extractor, report-writer
 .claude/skills/analyze-competitor/
 data/raw|ads|llm|media/      local only, git-ignored (retention: AGENTS.md)
-reports/<target>/            <date>-competitor-report.md (git-ignored)
+reports/<target>/            <date>-competitor-report.md and <date>-ads.csv (git-ignored)
 docs/                        research, decisions, compliance
 tests/                       pytest + synthetic fixtures
 ```

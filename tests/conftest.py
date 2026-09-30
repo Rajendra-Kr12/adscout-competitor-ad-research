@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 FIXTURES = ROOT / "tests" / "fixtures"
 SYNTHETIC = FIXTURES / "ads_archive_synthetic.json"
-UK_PAGE, IN_PAGE = "900000000000001", "900000000000002"
+UK_PAGE, IN_PAGE, MULTI_PAGE = "900000000000001", "900000000000002", "900000000000003"
 
 
 @pytest.fixture

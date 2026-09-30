@@ -16,8 +16,8 @@ Setup, usage and coverage caveats: `README.md`. Decisions: `docs/decisions.md`. 
 
 - Python venv: `.venv/bin/python`. Tests: `.venv/bin/python -m pytest -q`. The tests are fully offline and use synthetic fixtures (`tests/fixtures/`, `scripts/fixture_api.py`).
 - Without a token, use `--dry-run` (request plan) or `--fixture tests/fixtures/ads_archive_synthetic.json`.
-- Deterministic numbers come from scripts. Judgement comes from the sub-agents in `.claude/agents/`, and their output is validated against `schemas/ad.schema.json`. If you change a prompt in `prompts/`, bump its version (`extract-v1`).
-- Test brands and Page IDs live in `config/competitors.yaml`, not in code.
+- Deterministic numbers come from scripts. Judgement comes from the sub-agents in `.claude/agents/`, and their output is validated against `schemas/ad.schema.json` (v0.2; `SCHEMA_VERSION` lives in `scripts/text_metrics.py`, keep changes additive and let `upgrade_ad` migrate old files). If you change a prompt in `prompts/`, bump its version (`extract-v1`).
+- Test brands and Page IDs live in `config/competitors.yaml`, not in code. Countries come from config or `--country`; never hard-code GB. Outside the EU/UK, 0 commercial ads is coverage, not an error, and outputs must say so.
 
 ## Maintaining this file
 

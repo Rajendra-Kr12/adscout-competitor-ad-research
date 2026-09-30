@@ -27,6 +27,7 @@ import requests
 from common import (
     DATA_DIR,
     DEFAULT_API_VERSION,
+    EU_UK,
     iso_z,
     load_competitors,
     load_env,
@@ -166,6 +167,15 @@ def build_params(*, page_ids, search_terms, countries, date_min, date_max, media
     return params
 
 
+def zero_ads_note(countries: list[str]) -> str:
+    outside = [c for c in countries if c not in EU_UK and c != "ALL"]
+    if outside and len(outside) == len(countries):
+        return (f"0 ads returned for {', '.join(countries)}. Meta's Ad Library API only covers commercial "
+                "ads delivered to the EU/UK, so this is a coverage limit, not an error.")
+    return ("0 ads returned. Commercial ads are only returned when delivered to the EU/UK; "
+            "check coverage in README before assuming the Page ID is wrong.")
+
+
 def resolve_target(args, competitors) -> dict:
     target = {"key": args.out_key, "page_ids": [], "search_terms": None, "countries": None,
               "competitor": None}
@@ -280,8 +290,7 @@ def main(argv=None) -> int:
 
     print(f"{mode}: {total} records, {len(unique)} unique ads -> {out}", file=sys.stderr)
     if not unique:
-        print("0 ads returned. Commercial ads are only returned when delivered to the EU/UK; "
-              "check coverage in README before assuming the Page ID is wrong.", file=sys.stderr)
+        print(zero_ads_note(target["countries"]), file=sys.stderr)
     print(out)
     return 0
 

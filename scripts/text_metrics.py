@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Deterministic text metrics for normalized ads (no LLM).
+"""Deterministic text and reach metrics for normalized ads (no LLM).
 
-compute(text) -> the per-ad `derived` block except near_duplicate_of.
+compute(text, eu_metrics) -> the per-ad `derived` block except near_duplicate_of.
 assign_near_duplicates(ads) -> fills derived.near_duplicate_of across one Page's ads.
+upgrade_ad(ad) -> brings an older normalized ad up to the current schema in memory.
 
 CLI: python scripts/text_metrics.py data/ads/<target>   # recompute in place
 """
@@ -31,6 +32,11 @@ PERCENT_OFF_RE = re.compile(
 )
 DOMAIN_RE = re.compile(r"^(?:https?://)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)", re.IGNORECASE)
 NEAR_DUP_THRESHOLD = 0.85
+SCHEMA_VERSION = "0.2"
+TEXT_FIELDS = ("bodies", "link_titles", "link_descriptions", "link_captions")
+# total_reach_by_location key for the UK: live v26.0 data uses "GB" (observed 2026-09-30) while the
+# ArchivedAd reference says "UK". Accept both.
+UK_KEYS = ("GB", "UK")
 
 
 def _nonempty_lines(s: str) -> list[str]:
@@ -45,10 +51,85 @@ def landing_domain(captions: list[str]) -> str | None:
     return None
 
 
-def compute(text: dict) -> dict:
+def unique_variants(values: list[str]) -> list[dict]:
+    """Collapse identical texts (whitespace-insensitive), first-seen order, with a repeat count."""
+    out: list[dict] = []
+    index: dict[str, dict] = {}
+    for v in values:
+        key = " ".join(v.split())
+        if not key:
+            continue
+        if key in index:
+            index[key]["count"] += 1
+        else:
+            index[key] = {"text": v.strip(), "count": 1}
+            out.append(index[key])
+    return out
+
+
+def location_reach(total_reach_by_location) -> dict[str, int]:
+    """total_reach_by_location (list<KeyValue:string,int32>) -> {"UK": n, "EU": n, ...}.
+
+    Accepts [{"key": k, "value": v}], a plain {k: v} mapping, and
+    [{"location"|"country": k, "reach"|"value": v}] defensively.
+    """
+    items = total_reach_by_location
+    if isinstance(items, dict):
+        items = [{"key": k, "value": v} for k, v in items.items()]
+    out: dict[str, int] = {}
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        key = item.get("key", item.get("location", item.get("country")))
+        value = item.get("value", item.get("reach"))
+        try:
+            out[str(key).upper()] = int(value)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def breakdown_rows(breakdown) -> list[dict]:
+    """age_country_gender_reach_breakdown -> flat rows {country, age_range, male, female, unknown}."""
+    rows = []
+    for c in breakdown if isinstance(breakdown, list) else []:
+        if not isinstance(c, dict):
+            continue
+        for b in c.get("age_gender_breakdowns") or []:
+            if not isinstance(b, dict):
+                continue
+            rows.append({"country": str(c.get("country") or "?").upper(),
+                         "age_range": str(b.get("age_range") or "?"),
+                         **{g: int(b.get(g) or 0) for g in ("male", "female", "unknown")}})
+    return rows
+
+
+def reach_by_country(breakdown) -> dict[str, int]:
+    """Sum of the age x gender breakdown per country (a lower bound, labelled as such in reports)."""
+    out: dict[str, int] = {}
+    for r in breakdown_rows(breakdown):
+        out[r["country"]] = out.get(r["country"], 0) + r["male"] + r["female"] + r["unknown"]
+    return out
+
+
+def uk_reach(eu_metrics: dict | None) -> dict | None:
+    """UK reach from total_reach_by_location, else the GB breakdown sum; None when neither exists."""
+    eu_metrics = eu_metrics or {}
+    loc = location_reach(eu_metrics.get("total_reach_by_location"))
+    for k in UK_KEYS:
+        if k in loc:
+            return {"value": loc[k], "basis": "total_reach_by_location"}
+    by_country = reach_by_country(eu_metrics.get("age_country_gender_reach_breakdown"))
+    if "GB" in by_country:
+        return {"value": by_country["GB"], "basis": "breakdown_sum"}
+    return None
+
+
+def compute(text: dict, eu_metrics: dict | None = None) -> dict:
     bodies = [b for b in text.get("bodies", []) if b is not None]
     all_text = "\n".join(bodies + text.get("link_titles", []) + text.get("link_descriptions", []))
     first = next((ln.strip() for b in bodies for ln in _nonempty_lines(b)), None)
+    eu_metrics = eu_metrics or {}
     return {
         "body_chars": [len(b) for b in bodies],
         "body_words": [len(b.split()) for b in bodies],
@@ -61,7 +142,21 @@ def compute(text: dict) -> dict:
         "first_line": first[:200] if first else None,
         "landing_domain": landing_domain(text.get("link_captions", [])),
         "near_duplicate_of": None,
+        # creative-only: no primary text at all (catalog / video-only ads). Visuals are the only content.
+        "text_status": "has_text" if any(b.strip() for b in bodies) else "creative-only",
+        "variants_unique": {f: unique_variants(text.get(f, [])) for f in TEXT_FIELDS},
+        "uk_reach": uk_reach(eu_metrics),
+        "reach_by_country": reach_by_country(eu_metrics.get("age_country_gender_reach_breakdown")),
     }
+
+
+def upgrade_ad(ad: dict) -> dict:
+    """Recompute derived{} for an ad normalized under an older schema (keeps near_duplicate_of)."""
+    if ad.get("schema_version") != SCHEMA_VERSION:
+        near = (ad.get("derived") or {}).get("near_duplicate_of")
+        ad["derived"] = {**compute(ad["text"], ad.get("eu_metrics")), "near_duplicate_of": near}
+        ad["schema_version"] = SCHEMA_VERSION
+    return ad
 
 
 def _shingles(s: str, k: int = 3) -> set[tuple[str, ...]]:
@@ -95,7 +190,8 @@ def main(argv=None) -> int:
     files = sorted(Path(argv[0]).glob("*.json"))
     ads = [json.loads(f.read_text()) for f in files]
     for ad in ads:
-        ad["derived"] = compute(ad["text"])
+        ad["derived"] = compute(ad["text"], ad.get("eu_metrics"))
+        ad["schema_version"] = SCHEMA_VERSION
     assign_near_duplicates(ads)
     for f, ad in zip(files, ads):
         write_json(f, ad)

@@ -61,4 +61,4 @@ Then launch the `report-writer` sub-agent with the report path and target.
 ## 5. Verify and hand back
 
 - `grep -rl access_token data/ads reports` must print nothing.
-- Reply with the report path, the ad count, the LLM coverage, the coverage basis, and 3 headline takeaways.
+- Reply with the report path, the `-ads.csv` path, the ad count, the LLM coverage, the coverage basis, and 3 headline takeaways. If a non-EU/UK country returned 0 ads, say that this is the API's EU/UK coverage limit, not an error.
