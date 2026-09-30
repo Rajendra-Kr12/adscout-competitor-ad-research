@@ -88,11 +88,13 @@ def transport(responses):
     return t, sleeps
 
 
-@pytest.mark.parametrize("code", [4, 17, 32, 613, 80000])
-def test_rate_limit_codes_are_retried_with_backoff(code):
-    t, sleeps = transport([err(code), err(code), FakeResp(200, {"data": []})])
-    assert t.get("https://x", {}) == {"data": []}
-    assert len(sleeps) == 2 and sleeps[1] > sleeps[0] * 1.5
+@pytest.mark.parametrize("code", [4, 17, 32, 341, 613, 80000])
+def test_throttle_codes_are_never_retried(code):
+    # Meta: "When the limit has been reached, stop making API calls". Phase 0 retried 5 times.
+    t, sleeps = transport([err(code), FakeResp(200, {"data": []})])
+    with pytest.raises(fetch_ads.MetaApiError, match=f"code={code}"):
+        t.get("https://x", {})
+    assert t.session.calls == 1 and sleeps == []
 
 
 def test_server_errors_are_retried():
@@ -100,11 +102,11 @@ def test_server_errors_are_retried():
     assert t.get("https://x", {}) == {"data": [1]} and len(sleeps) == 1
 
 
-def test_retries_give_up_after_max():
-    t, sleeps = transport([err(17)] * 6)
-    with pytest.raises(fetch_ads.MetaApiError, match="code=17"):
+def test_transient_retries_give_up_after_three():
+    t, sleeps = transport([err(2)] * 6)
+    with pytest.raises(fetch_ads.MetaApiError, match="code=2"):
         t.get("https://x", {})
-    assert len(sleeps) == 5
+    assert sleeps == [2, 8, 30] and t.session.calls == 4
 
 
 @pytest.mark.parametrize("code,subcode,needle", [
@@ -134,10 +136,20 @@ def test_error_messages_are_token_scrubbed():
     assert "SECRET123" not in str(exc.value)
 
 
-def test_high_app_usage_pauses():
-    t, sleeps = transport([FakeResp(200, {"data": []}, {"x-app-usage": '{"call_count": 97, "total_time": 10}'})])
-    t.get("https://x", {})
-    assert sleeps == [60]
+def test_high_app_usage_is_handled_by_the_guard(tmp_path):
+    # Soft limit: pause, then continue. Hard limit: cool down so the next call is refused.
+    from guard import Guard, GuardStop, load_config
+    sleeps = []
+    g = Guard(tmp_path, load_config(), sleep=sleeps.append, log=lambda m: None, env={}, jitter=lambda a, b: 0)
+    soft = FakeResp(200, {"data": []}, {"x-app-usage": '{"call_count": 80, "total_time": 10}'})
+    hard = FakeResp(200, {"data": [1]}, {"x-app-usage": '{"call_count": 97, "total_time": 10}'})
+    t = fetch_ads.GraphTransport(FakeSession([soft, hard, soft]), guard=g, sleep=sleeps.append, log=lambda m: None)
+    assert t.get("https://x", {}) == {"data": []}
+    assert 300 in sleeps
+    assert t.get("https://x", {}) == {"data": [1]}  # the page that crossed 90% is kept
+    with pytest.raises(GuardStop, match="cooling down"):
+        t.get("https://x", {})
+    assert t.session.calls == 2
 
 
 # --- CLI modes -------------------------------------------------------------

@@ -1,7 +1,7 @@
 """End-to-end offline pipeline: fetch (fixture) -> normalize -> llm merge -> report.
 
-Also the token-scrubbing guarantee: the raw layer contains access_token (as the real
-API does), and nothing under data/ads or reports does.
+Also the token-scrubbing guarantee: the API returns access_token inside ad_snapshot_url
+(the fixture does too), fetch strips it before writing raw, and nothing on disk has it.
 """
 import json
 import shutil
@@ -53,13 +53,15 @@ def test_no_access_token_outside_raw(tmp_path, fixtures_dir):
     key, raw = pipeline(tmp_path, fixtures_dir)
     reports = tmp_path / "reports"
     build_report.main(["--target", key, "--data-dir", str(tmp_path), "--reports-dir", str(reports)])
-    assert "access_token=FIXTURE-NOT-A-REAL-TOKEN" in raw.read_text()  # raw keeps snapshot URLs
-    for root in (tmp_path / "ads", reports):
+    assert "render_ad/?id=" in raw.read_text()  # raw keeps snapshot URLs, minus the token
+    for root in (tmp_path / "raw", tmp_path / "runs", tmp_path / "state", tmp_path / "ads", reports):
         files = all_text(root)
         assert files
         for path, text in files.items():
             assert "access_token" not in text.lower(), path
-            assert "render_ad" not in text, path
+            assert "FIXTURE-NOT-A-REAL-TOKEN" not in text, path
+            if root.name != "raw":
+                assert "render_ad" not in text, path
 
 
 def test_report_refuses_to_write_token(tmp_path, fixtures_dir):

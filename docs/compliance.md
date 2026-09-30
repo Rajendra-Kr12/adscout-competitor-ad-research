@@ -16,16 +16,25 @@ Basis: Meta Terms §3.2 ("You may not access or collect data from our Products u
 ## Tokens and secrets
 
 - `META_ACCESS_TOKEN` lives only in `.env` (git-ignored). `.env.example` holds empty placeholders.
-- `ad_snapshot_url` embeds the access token, so it is kept **only** in `data/raw/`. It is never written to `data/ads/`, `data/llm/`, reports or chat output. `scripts/common.py:write_json` and `build_report.py` refuse to write any text containing `access_token`, and `tests/test_pipeline.py` asserts this.
+- The API returns `ad_snapshot_url` with the access token embedded. `fetch_ads.py` strips the `access_token` parameter **before** writing `data/raw/` and refuses to write any line that still contains it. Raw files are created 0600. The snapshot URL itself is kept **only** in `data/raw/`. It is never written to `data/ads/`, `data/llm/`, reports or chat output. `scripts/common.py:write_json` and `build_report.py` refuse to write any text containing `access_token`, and `tests/test_pipeline.py` asserts this.
 - Error messages are token-scrubbed before they are printed.
 - Reports cite ads only by the public permalink `https://www.facebook.com/ads/library/?id=<library_id>`.
 - `reports/<target>/<date>-ads.csv` carries each ad's full text, so it is Platform Data like the report: git-ignored, private, and written only through the same `access_token` check.
+
+## Request volume (Graph API rate limiting; Platform Terms §7.e)
+
+Meta: "When the limit has been reached, stop making API calls. Continuing to make calls will continue to increase your call count." `scripts/guard.py` enforces this for every call:
+
+- Throttle codes are never retried. The run stops and a cooldown of at least 60 minutes (or Meta's `estimated_time_to_regain_access`) blocks new runs.
+- The caps in `config/guard.yaml` (per run, per hour, per day) and call spacing apply across processes, and only one run can hold the lock.
+- Codes that put the account or app at risk (190, 368, 459, 464, 10/200-299, 2332002/2332004, 613/1996) trip a kill switch that only a human can clear, at an interactive terminal.
+- Every run leaves a ledger in `data/runs/`.
 
 ## Retention (Platform Terms §3.d)
 
 | Data | Location | Keep |
 |---|---|---|
-| Raw API pulls (contain tokens in snapshot URLs) | `data/raw/` | 180 days |
+| Raw API pulls (token stripped, 0600) | `data/raw/` | 180 days |
 | LLM batch inputs and outputs | `data/llm/` | 180 days |
 | Creative media (Phase 1) | `data/media/` | 90 days |
 | Normalized ads | `data/ads/` | While the analysis is in use. Re-derivable from raw |

@@ -16,7 +16,8 @@ Use `.venv/bin/python` (see README "Setup"). `<target>` is the competitor key fr
 
 - Resolve the target: a key in `config/competitors.yaml`, or a numeric Page ID (then `--country` is required), or keyword search terms.
 - Live runs need `META_ACCESS_TOKEN` in `.env`. If it is missing, stop and point to the README, or offer the offline demo (`--fixture tests/fixtures/ads_archive_synthetic.json --page-id 900000000000001 --country GB --out-key synthetic-uk`).
-- Show the plan without sending anything: `.venv/bin/python scripts/fetch_ads.py <target args> --since A --until B --dry-run`.
+- Run `.venv/bin/python scripts/guard.py status`. If the kill switch or a cooldown is on, stop and tell the captain why. Never run `guard.py unkill` or `clear-cooldown`; only the captain does that.
+- Show the plan without sending anything: `.venv/bin/python scripts/fetch_ads.py <target args> --since A --until B --dry-run`. It also prints the calls already used against the guard caps.
 
 ## 1. Fetch (deterministic)
 
@@ -25,7 +26,7 @@ Use `.venv/bin/python` (see README "Setup"). `<target>` is the competitor key fr
 ```
 
 - Add `--media-types IMAGE,VIDEO,MEME,NONE` when the media mix matters. This costs 4x the queries.
-- On `2332002` (identity not approved), `2332004` (app token) or `190` (expired token), stop and relay the message. Do not retry.
+- Exit code 2 or 3 means the run stopped (API error or guard). Relay the message and the ledger path, and do not retry. That covers `2332002` (identity not approved), `2332004` (app token), `190` (expired token), throttling (cooldown) and the kill switch. `normalize.py` refuses the partial raw file; use `--allow-partial` only if the captain wants the partial data.
 - 0 ads for a non-EU/UK market is the expected coverage gap, not a bug. Still build the report, because it explains the gap.
 - Keyword runs can return other Pages' ads. Pass `--only-page-id <id>` to normalize if needed, and record the discovered Page ID in `config/competitors.yaml` with `page_id_verified: true`.
 

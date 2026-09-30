@@ -6,7 +6,8 @@ Setup, usage and coverage caveats: `README.md`. Decisions: `docs/decisions.md`. 
 ## Hard rules
 
 - **Official Meta APIs only** (`ads_archive`, and later the Meta-hosted Ads MCP). Never scrape facebook.com or the Ad Library website, and never drive them with a browser agent (Claude in Chrome, computer use, Playwright, chrome-devtools), even "just to check". A human can look; the agent can't. Don't install third-party Ad Library scrapers or "Meta Ads MCP" proxies. See `docs/compliance.md`.
-- **`ad_snapshot_url` never leaves `data/raw/`**, because it embeds the access token. Outputs (`data/ads/`, `data/llm/`, `reports/`, chat) cite ads only as `https://www.facebook.com/ads/library/?id=<library_id>`. Nothing outside `data/raw/` or `.env` may contain `access_token`; `write_json` / `build_report.py` enforce this, so don't bypass them.
+- **Every Meta call goes through `scripts/guard.py`** (caps, cooldown, kill switch, lock, ledger; policy in `config/guard.yaml`). Never add a call path around it, never retry throttle codes, and never run `guard.py unkill` or `clear-cooldown`: a tripped guard is for the captain to clear.
+- **`ad_snapshot_url` never leaves `data/raw/`**. The API embeds the access token in it; `fetch_ads.py` strips the token before writing raw files. Outputs (`data/ads/`, `data/llm/`, `reports/`, chat) cite ads only as `https://www.facebook.com/ads/library/?id=<library_id>`. Nothing outside `data/raw/` or `.env` may contain `access_token`; `write_json` / `build_report.py` enforce this, so don't bypass them.
 - **Never commit** `.env`, `data/` contents or `reports/<target>/`. They are git-ignored, so keep it that way.
 - **Retention:** raw pulls and LLM batches 180 days, media 90 days, reports kept. Use `scripts/purge_expired.py`.
 - **Creative media (Phase 1, not built):** download only per ad, on demand, and only for analysis. No bulk mirroring.

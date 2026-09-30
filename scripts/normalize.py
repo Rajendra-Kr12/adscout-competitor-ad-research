@@ -4,6 +4,9 @@
 Only whitelisted fields are copied. ad_snapshot_url (which embeds the access token)
 never leaves data/raw/. Existing llm{} blocks are kept when an ad is re-normalized.
 
+A run that stopped early (no closing summary line) is refused unless --allow-partial,
+so a throttled or killed run is never mistaken for a complete month range.
+
 Usage:
   python scripts/normalize.py data/raw/<target>/<run_id>.jsonl
   python scripts/normalize.py --target <target>            # latest run for that target
@@ -40,8 +43,12 @@ def validator() -> jsonschema.Draft202012Validator:
     return jsonschema.Draft202012Validator(json.loads(SCHEMA_PATH.read_text()))
 
 
-def read_run(path: Path) -> tuple[dict, list[dict]]:
-    header, records = {}, []
+class PartialRunError(ValueError):
+    pass
+
+
+def read_run(path: Path, allow_partial: bool = False) -> tuple[dict, list[dict]]:
+    header, records, summary, stopped = {}, [], None, None
     for line in path.read_text().splitlines():
         if not line.strip():
             continue
@@ -50,8 +57,17 @@ def read_run(path: Path) -> tuple[dict, list[dict]]:
             header = rec
         elif rec.get("type") == "ad":
             records.append(rec)
+        elif rec.get("type") == "summary":
+            summary = rec
+        elif rec.get("type") == "stopped":
+            stopped = rec
     if not header:
         raise ValueError(f"{path}: missing run header line")
+    if summary is None and not allow_partial:
+        why = f"it stopped early: {stopped.get('reason')}; missing windows: {stopped.get('windows_missing')}" \
+            if stopped else "it has no closing summary line (aborted or still running)"
+        raise PartialRunError(f"{path.name} is a partial run ({why}). Re-fetch, or pass --allow-partial "
+                              "to normalize what it has.")
     return header, records
 
 
@@ -126,8 +142,9 @@ def normalize_ad(rec: dict, header: dict, media_hint: str | None, existing: dict
     return out
 
 
-def normalize_run(raw_path: Path, data_dir: Path = DATA_DIR, only_page_id: str | None = None) -> Path:
-    header, records = read_run(raw_path)
+def normalize_run(raw_path: Path, data_dir: Path = DATA_DIR, only_page_id: str | None = None,
+                  allow_partial: bool = False) -> Path:
+    header, records = read_run(raw_path, allow_partial)
     key = header["target"]["key"]
     out_dir = data_dir / "ads" / key
     # Last record per library id wins (latest fetch); media hint from any typed query.
@@ -171,12 +188,18 @@ def main(argv=None) -> int:
     ap.add_argument("raw", nargs="?", type=Path, help="data/raw/<target>/<run_id>.jsonl")
     ap.add_argument("--target", help="use the latest run for this target key")
     ap.add_argument("--only-page-id", help="keep only ads from this Page (useful for keyword runs)")
+    ap.add_argument("--allow-partial", action="store_true",
+                    help="normalize a run that stopped early (its missing windows stay missing)")
     ap.add_argument("--data-dir", type=Path, default=DATA_DIR)
     args = ap.parse_args(argv)
     raw = args.raw or (latest_run(args.data_dir, args.target) if args.target else None)
     if not raw:
         ap.error("give a raw file or --target")
-    print(normalize_run(raw, args.data_dir, args.only_page_id))
+    try:
+        print(normalize_run(raw, args.data_dir, args.only_page_id, args.allow_partial))
+    except PartialRunError as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 

@@ -72,10 +72,33 @@ Put the returned `access_token` into `.env` as `META_ACCESS_TOKEN`, along with `
 |---|---|---|
 | **2332002** | Identity or Ad Library API access is not approved yet | Finish facebook.com/ID and wait |
 | **2332004** | An app access token was used | Generate a **user** token in Graph API Explorer |
-| **190** | Token invalid or expired | New user token, then run the long-lived exchange again |
-| 4, 17, 32, 613, 80000-80014 | Rate limited | The fetcher retries with exponential backoff and pauses at 95% `X-App-Usage` |
+| **190** | Token invalid or expired | New user token, then run the long-lived exchange again. Also trips the kill switch |
+| 4, 17, 32, 341, 613, 80000-80014 | Rate limited | **Never retried.** The run stops, the guard sets a cooldown of at least 60 minutes, and later runs are refused until it ends |
+| 613 / subcode 1996 | Inconsistent request volume | Kill switch trips (see "API guard") |
+| 368, 459, 464 | Policy block, account checkpoint, unconfirmed user | Kill switch trips. A human resolves it on facebook.com; the agent never does |
 | 100 | Invalid parameter | Check the page ID, country codes and date format |
 | 0 ads for an IN/US brand | Coverage, not an error | Only EU/UK-delivered commercial ads are in the API |
+
+## API guard
+
+Every Meta call goes through `scripts/guard.py`, with the policy in `config/guard.yaml` and state in
+`data/state/guard/`. It enforces:
+
+- **Caps** of 200 calls per run, 150 per hour and 600 per day (persisted across processes), with at least 1.5 s between calls.
+- **Usage headers** (`X-App-Usage`, `X-Business-Use-Case-Usage`, `X-Ad-Account-Usage`): at 75% it pauses 5 minutes; at 90% it stops and cools down for 60 minutes.
+- **No retry on throttling.** Only codes 1/2, HTTP 5xx and network errors are retried (3 times: 2, 8, 30 s). 5 consecutive failures open a 15-minute circuit breaker.
+- **Kill switch** (`data/state/guard/KILL`, or `FBCM_KILL=1`): it trips on 190, 368, 459, 464, 10/200-299, 2332002/2332004 and 613/1996, and blocks every run until a human clears it.
+- **One run at a time** (a lock file), and a **ledger** per run in `data/runs/<run_id>.json` (calls, pages, windows done/missing, errors, usage peaks, cooldowns).
+
+```bash
+$PY scripts/guard.py status              # kill switch, cooldown, calls used, last run
+$PY scripts/guard.py kill "reason"       # stop everything
+$PY scripts/guard.py unkill              # human only: needs a typed confirmation in a terminal
+$PY scripts/guard.py clear-cooldown      # human only, same confirmation
+```
+
+A run that stops early leaves a raw file without its summary line. `normalize.py` refuses it unless
+you pass `--allow-partial`, and the ledger lists the missing windows.
 
 ## Usage
 
@@ -93,7 +116,10 @@ $PY scripts/build_report.py --target forest-essentials-uk --since 2025-10 --unti
 ```
 
 Other targets: `--page-id <id> --country GB`, or `--search-terms "Pukka Herbs" --country GB` (keyword
-results can include other Pages, so pass `--only-page-id` to `normalize.py`). Add
+results can include other Pages, so pass `--only-page-id` to `normalize.py`). Keyword queries default to
+`--search-type KEYWORD_EXACT_PHRASE`. With `KEYWORD_UNORDERED` (the API's own default) each word is
+matched separately, in any order, which is how "Forest Essentials" pulls in unrelated ads. A competitor
+can set `search_type` in `config/competitors.yaml`. Add
 `--media-types IMAGE,VIDEO,MEME,NONE` to label media types. This costs one query per type.
 Competitors live in `config/competitors.yaml`.
 
@@ -140,12 +166,14 @@ Settings > Integrations > Ads MCP server.
 ```
 config/competitors.yaml      test brands (UK pick not final)
 schemas/ad.schema.json       per-ad schema v0.2 (research §7.3; additive over v0.1)
-scripts/                     fetch_ads, normalize, text_metrics, llm_batches, build_report,
+config/guard.yaml            API guard caps and thresholds
+scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report template (versioned)
 .claude/agents/              ad-extractor, report-writer
 .claude/skills/analyze-competitor/
-data/raw|ads|llm|media/      local only, git-ignored (retention: AGENTS.md)
+data/raw|ads|llm|media/      local only, git-ignored (retention: AGENTS.md); raw files are 0600, token stripped
+data/state/guard/, data/runs/ guard state and run ledgers (git-ignored; data/* is ignored as a whole)
 reports/<target>/            <date>-competitor-report.md and <date>-ads.csv (git-ignored)
 docs/                        research, decisions, compliance
 tests/                       pytest + synthetic fixtures

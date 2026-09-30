@@ -1,0 +1,23 @@
+# API guard policy, enforced by scripts/guard.py for every Meta Graph call.
+# Normal use is 2-40 calls a day; the caps exist to stop runaway loops, not to be reached.
+# Meta: "When the limit has been reached, stop making API calls" (Graph API rate limiting doc).
+
+api:
+  min_interval_s: 1.5          # spacing between any two Meta calls (plus up to 50% jitter)
+  max_calls_per_run: 200
+  max_calls_per_hour: 150      # persisted in data/state/guard/usage.json across processes
+  max_calls_per_day: 600
+  usage_soft_pct: 75           # any X-App-Usage / BUC / ad-account metric >= 75 -> sleep, then continue
+  usage_soft_sleep_s: 300
+  usage_hard_pct: 90           # >= 90 -> stop the run and cool down
+  usage_hard_cooldown_min: 60
+  throttle_cooldown_min: 60    # throttle codes are never retried; cooldown = max(this, estimated_time_to_regain_access)
+  transient_retries: 3         # only codes 1, 2, HTTP 5xx and network errors
+  transient_delays_s: [2, 8, 30]
+  max_pages_per_query: 50
+  breaker_failures: 5          # consecutive failed calls (across runs) that open the circuit
+  breaker_cooldown_min: 15
+
+token:
+  warn_days: [14, 7, 3]        # expiry warnings (token_cli.py status)
+  status_cache_hours: 24       # debug_token is called at most this often by preflight

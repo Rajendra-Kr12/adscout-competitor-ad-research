@@ -4,14 +4,37 @@ It mimics the parts of the real API the pipeline depends on: search_page_ids /
 search_terms filtering, ad_reached_countries with EU/UK-only coverage for commercial
 ads, delivery-date windows, media_type filtering, limit + paging.next, and
 ad_snapshot_url values that embed the access token (so scrubbing can be tested).
+
+Keyword matching follows the ads_archive reference (v26.0): search_type
+KEYWORD_UNORDERED (the API default when search_type is omitted) matches each word
+separately, in any order; KEYWORD_EXACT_PHRASE matches the words as one phrase.
+Words are matched against the Page name and all creative text, case-insensitively.
 """
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from common import EU_UK, parse_ts
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+def keyword_match(ad: dict, terms: str, search_type: str | None) -> bool:
+    hay = _words(" ".join([ad.get("page_name") or ""] + [
+        t for f in ("ad_creative_bodies", "ad_creative_link_titles", "ad_creative_link_descriptions",
+                    "ad_creative_link_captions") for t in ad.get(f) or []]))
+    want = _words(terms)
+    if not want:
+        return True
+    if (search_type or "KEYWORD_UNORDERED") == "KEYWORD_EXACT_PHRASE":
+        n = len(want)
+        return any(hay[i:i + n] == want for i in range(len(hay) - n + 1))
+    return set(want) <= set(hay)
 
 
 class FixtureTransport:
@@ -41,10 +64,8 @@ class FixtureTransport:
         meta = ad.get("_fixture", {})
         if "search_page_ids" in p and str(ad.get("page_id")) not in json.loads(p["search_page_ids"]):
             return False
-        if "search_terms" in p:
-            hay = " ".join([ad.get("page_name", "")] + ad.get("ad_creative_bodies", [])).lower()
-            if p["search_terms"].strip("'\"").lower() not in hay:
-                return False
+        if "search_terms" in p and not keyword_match(ad, p["search_terms"], p.get("search_type")):
+            return False
         wanted = set(json.loads(p.get("ad_reached_countries", "[]")))
         reached = set(meta.get("reached_countries", []))
         if "ALL" not in wanted and not wanted & reached:

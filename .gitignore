@@ -3,14 +3,16 @@
 .env.*
 !.env.example
 
-# Platform Data with embedded tokens / media (retention-limited, never committed)
-data/raw/
-data/media/
-data/llm/
+# Everything under data/ is local: raw pulls, normalized ads, LLM batches, media (Platform
+# Data, retention-limited) plus guard state and run ledgers. Only the placeholder is tracked.
+data/*
+!data/.gitkeep
 
-# Normalized per-ad data and generated reports are Platform Data too; keep them local
-data/ads/
+# Generated reports are Platform Data too; keep them local
 reports/*/
+
+# launchd output and guard logs
+logs/
 
 # Python / tooling caches
 .venv/

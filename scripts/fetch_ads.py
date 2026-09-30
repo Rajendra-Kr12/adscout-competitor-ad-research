@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Fetch every ad for a Page (or keyword) from the official Ad Library API (ads_archive).
 
-Writes verbatim API records to data/raw/<target>/<run_id>.jsonl. Raw files contain
-ad_snapshot_url values that embed the access token, so data/raw/ is git-ignored and
-retention-limited (see AGENTS.md). Nothing here touches facebook.com pages.
+Every call goes through scripts/guard.py (kill switch, cooldown, caps, spacing, lock,
+ledger in data/runs/). Throttle errors are never retried. The access token is stripped
+from ad_snapshot_url before anything is written, and raw files are 0600. A run that
+stops early has no summary line, and normalize.py refuses it unless --allow-partial.
+Nothing here touches facebook.com pages.
 
 Examples:
   python scripts/fetch_ads.py --competitor forest-essentials-uk --since 2025-10 --until 2026-09
@@ -16,7 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
+import os
 import sys
 import time
 from pathlib import Path
@@ -28,14 +30,17 @@ from common import (
     DATA_DIR,
     DEFAULT_API_VERSION,
     EU_UK,
+    assert_no_token,
     iso_z,
     load_competitors,
     load_env,
     month_windows,
     scrub_tokens,
     slug,
+    strip_token_params,
     utc_now,
 )
+from guard import THROTTLE_CODES, TRANSIENT_CODES, Guard, GuardStop, classify_error
 
 FIELDS = [
     "id", "page_id", "page_name", "ad_creation_time", "ad_delivery_start_time",
@@ -46,10 +51,7 @@ FIELDS = [
     "target_locations", "beneficiary_payers",
 ]
 MEDIA_TYPES = ("ALL", "IMAGE", "MEME", "VIDEO", "NONE")
-
-# Graph error codes worth retrying: transient (1, 2), app/user/page/custom rate limits
-# (4, 17, 32, 613), and the Ads-API throttling family (80000-80014).
-RETRYABLE_CODES = {1, 2, 4, 17, 32, 341, 613} | set(range(80000, 80015))
+SEARCH_TYPES = ("KEYWORD_EXACT_PHRASE", "KEYWORD_UNORDERED")
 ACCESS_ERRORS = {
     2332002: "Ad Library API access not approved yet: finish identity confirmation at "
              "https://www.facebook.com/ID and wait for approval (it can take a few days).",
@@ -67,86 +69,96 @@ class MetaApiError(RuntimeError):
 
 
 class GraphTransport:
-    """GET with retry/backoff on rate-limit and transient errors."""
+    """GET through the guard. Retries only transient failures (codes 1/2, HTTP 5xx, network).
 
-    def __init__(self, session=None, *, max_retries: int = 5, base_delay: float = 2.0,
-                 max_delay: float = 300.0, sleep=time.sleep, log=None):
+    Throttle codes (4, 17, 32, 341, 613, 80000-80014) are never retried: the guard sets a
+    cooldown and the error is raised, because Meta says to stop calling at the limit.
+    """
+
+    def __init__(self, session=None, *, guard: Guard | None = None, retries: int = 3,
+                 delays=(2, 8, 30), sleep=time.sleep, log=None):
         self.session = session or requests.Session()
-        self.max_retries, self.base_delay, self.max_delay = max_retries, base_delay, max_delay
+        self.guard = guard
+        self.retries, self.delays = retries, list(delays)
         self.sleep = sleep
-        self.log = log or (lambda msg: print(msg, file=sys.stderr))
-
-    def _backoff(self, attempt: int) -> float:
-        delay = min(self.max_delay, self.base_delay * (2 ** attempt))
-        return delay + random.uniform(0, delay / 4)
+        self.log = log or (lambda msg: print(scrub_tokens(msg), file=sys.stderr))
 
     def get(self, url: str, params: dict | None) -> dict:
         attempt = 0
         while True:
+            if self.guard:
+                self.guard.before_call()
+            code = subcode = status = None
+            headers: dict = {}
             try:
                 resp = self.session.get(url, params=params, timeout=60)
             except requests.RequestException as exc:
-                err, status = MetaApiError(f"network error: {exc}"), None
+                err = MetaApiError(f"network error: {exc}")
             else:
-                status = resp.status_code
+                status, headers = resp.status_code, resp.headers
                 try:
                     body = resp.json()
                 except ValueError:
                     body = {"error": {"message": f"non-JSON response (HTTP {status})"}}
                 if status == 200 and "error" not in body:
-                    self._respect_usage(resp.headers)
+                    if self.guard:
+                        self.guard.after_success(headers)
                     return body
                 e = body.get("error") or {}
                 code, subcode = e.get("code"), e.get("error_subcode")
-                for c in (subcode, code):
-                    if c in ACCESS_ERRORS:
-                        raise MetaApiError(f"[{c}] {ACCESS_ERRORS[c]} (Meta said: {e.get('message')})",
-                                           code, subcode)
-                err = MetaApiError(f"HTTP {status} code={code} subcode={subcode}: {e.get('message')}",
-                                   code, subcode)
-                if code not in RETRYABLE_CODES and not (status and status >= 500):
-                    raise err
-            if attempt >= self.max_retries:
+                hint = next((ACCESS_ERRORS[c] for c in (subcode, code) if c in ACCESS_ERRORS), None)
+                if hint:
+                    err = MetaApiError(f"[{subcode or code}] {hint} (Meta said: {e.get('message')})", code, subcode)
+                else:
+                    err = MetaApiError(f"HTTP {status} code={code} subcode={subcode}: {e.get('message')}",
+                                       code, subcode)
+            if self.guard:
+                self.guard.after_failure(code=code, subcode=subcode, status=status, headers=headers,
+                                         message=str(err))
+            fatal = code in THROTTLE_CODES or classify_error(code, subcode) is not None
+            transient = code in TRANSIENT_CODES or status is None or status >= 500
+            if fatal or not transient or attempt >= min(self.retries, len(self.delays)):
                 raise err
-            delay = self._backoff(attempt)
-            self.log(f"retry {attempt + 1}/{self.max_retries} in {delay:.0f}s: {err}")
+            delay = self.delays[attempt]
+            self.log(f"transient error, retry {attempt + 1}/{self.retries} in {delay}s: {err}")
             self.sleep(delay)
             attempt += 1
 
-    def _respect_usage(self, headers) -> None:
-        """Pause when X-App-Usage says we are close to the hourly app limit."""
-        raw = (headers or {}).get("x-app-usage") or (headers or {}).get("X-App-Usage")
-        if not raw:
-            return
-        try:
-            usage = json.loads(raw)
-            peak = max(float(v) for v in usage.values())
-        except (ValueError, TypeError, AttributeError):
-            return
-        if peak >= 95:
-            self.log(f"X-App-Usage at {peak:.0f}%, pausing 60s")
-            self.sleep(60)
+
+class GuardedFixture:
+    """Offline transport that still passes through the guard (kill switch, run cap, ledger)."""
+
+    def __init__(self, inner, guard: Guard):
+        self.inner, self.guard = inner, guard
+
+    def get(self, url: str, params: dict | None) -> dict:
+        self.guard.before_call()
+        body = self.inner.get(url, params)
+        self.guard.after_success({})
+        return body
 
 
-def iter_ads(transport, url: str, params: dict, *, max_pages: int = 10000):
-    """Yield every ad across pages by following paging.next until it disappears."""
+def iter_ads(transport, url: str, params: dict, *, max_pages: int = 50, on_page=None):
+    """Yield every ad across pages by following paging.next, up to max_pages pages."""
     seen: set[str] = set()
     pages = 0
     p: dict | None = params
     while url:
         body = transport.get(url, p)
         pages += 1
+        if on_page:
+            on_page()
         yield from body.get("data") or []
         url = (body.get("paging") or {}).get("next")
         p = None  # the next URL already carries every parameter
-        if url in seen or pages >= max_pages:
+        if url and (url in seen or pages >= max_pages):
             raise MetaApiError(f"paging stopped: repeated next URL or over {max_pages} pages")
         if url:
             seen.add(url)
 
 
 def build_params(*, page_ids, search_terms, countries, date_min, date_max, media_type,
-                 limit, token) -> dict:
+                 limit, token, search_type: str = "KEYWORD_EXACT_PHRASE") -> dict:
     params = {
         "ad_reached_countries": json.dumps(countries),
         "ad_active_status": "ALL",
@@ -160,6 +172,7 @@ def build_params(*, page_ids, search_terms, countries, date_min, date_max, media
         params["search_page_ids"] = json.dumps([str(p) for p in page_ids])
     if search_terms:
         params["search_terms"] = search_terms
+        params["search_type"] = search_type
     if media_type != "ALL":
         params["media_type"] = media_type
     if token:
@@ -177,13 +190,13 @@ def zero_ads_note(countries: list[str]) -> str:
 
 
 def resolve_target(args, competitors) -> dict:
-    target = {"key": args.out_key, "page_ids": [], "search_terms": None, "countries": None,
-              "competitor": None}
+    target = {"key": args.out_key, "page_ids": [], "search_terms": None, "search_type": None,
+              "countries": None, "competitor": None}
     if args.competitor:
         if args.competitor not in competitors:
             sys.exit(f"unknown competitor '{args.competitor}'. Known: {', '.join(competitors)}")
         c = competitors[args.competitor]
-        target.update(competitor=c["key"], countries=c.get("countries"))
+        target.update(competitor=c["key"], countries=c.get("countries"), search_type=c.get("search_type"))
         if c.get("page_id") and not args.search_terms:
             target["page_ids"] = [str(c["page_id"])]
         else:
@@ -194,6 +207,14 @@ def resolve_target(args, competitors) -> dict:
         target["search_terms"] = None
     if args.search_terms and not args.competitor:
         target["search_terms"] = args.search_terms
+    if args.search_type:
+        target["search_type"] = args.search_type
+    if target["search_terms"]:
+        target["search_type"] = (target["search_type"] or "KEYWORD_EXACT_PHRASE").upper()
+        if target["search_type"] not in SEARCH_TYPES:
+            sys.exit(f"unknown search type {target['search_type']!r}; use one of {', '.join(SEARCH_TYPES)}")
+    else:
+        target["search_type"] = None
     if args.country:
         target["countries"] = [c.upper() for c in args.country]
     if not (target["page_ids"] or target["search_terms"]):
@@ -207,13 +228,116 @@ def resolve_target(args, competitors) -> dict:
     return target
 
 
-def main(argv=None) -> int:
+def open_private(path: Path):
+    """Create a new 0600 file for writing (raw pulls are Platform Data)."""
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w")
+
+
+def raw_line(rec: dict) -> str:
+    line = json.dumps(strip_token_params(rec), ensure_ascii=False)
+    assert_no_token(line, "a raw record")  # anything the stripper missed stops the run
+    return line + "\n"
+
+
+def run_fetch(*, target: dict, windows, media_types, since: str, until: str, limit: int,
+              transport, token: str | None, mode: str, api_version: str, guard: Guard,
+              data_dir: Path) -> int:
+    started = utc_now()
+    run_id = started.strftime("%Y%m%dT%H%M%SZ")
+    out = data_dir / "raw" / target["key"] / f"{run_id}.jsonl"
+    n = 1
+    while out.exists():  # two runs in the same second for one target
+        n += 1
+        run_id = f"{started.strftime('%Y%m%dT%H%M%SZ')}-{n}"
+        out = out.with_name(f"{run_id}.jsonl")
+    header = {"type": "run", "run_id": run_id, "mode": mode, "api_version": api_version,
+              "target": target, "since": since, "until": until,
+              "media_types": media_types, "windows": windows, "started_at": iso_z(started)}
+    planned = [f"{dmin}/{mt}" for (dmin, _) in windows for mt in media_types]
+    guard.start_run(run_id, target=target["key"], countries=target["countries"],
+                    raw=str(out.relative_to(data_dir)), windows_planned=planned)
+    try:
+        result = _fetch_windows(out, header, planned, windows, media_types, target, limit, token,
+                                transport, guard, f"https://graph.facebook.com/{api_version}/ads_archive")
+    except BaseException as exc:
+        guard.close_run("error", stop_reason=scrub_tokens(f"{type(exc).__name__}: {exc}"))
+        raise
+    stopped, total, unique = result["stopped"], result["total"], result["unique"]
+    ledger = guard.close_run("stopped" if stopped else "ok", windows_missing=result["missing"],
+                             records=total, unique_ads=len(unique),
+                             stop_reason=str(stopped) if stopped else None)
+    if stopped:
+        print(f"{mode}: STOPPED after {guard.run_calls} call(s), {total} records: {stopped}", file=sys.stderr)
+        print(f"partial run (normalize.py refuses it without --allow-partial): {out}", file=sys.stderr)
+        print(f"ledger: {ledger}", file=sys.stderr)
+        return 3 if isinstance(stopped, GuardStop) else 2
+    print(f"{mode}: {total} records, {len(unique)} unique ads in {guard.run_calls} call(s) -> {out}",
+          file=sys.stderr)
+    if not unique:
+        print(zero_ads_note(target["countries"]), file=sys.stderr)
+    print(out)
+    return 0
+
+
+def _fetch_windows(out: Path, header: dict, planned: list[str], windows, media_types, target: dict,
+                   limit: int, token, transport, guard: Guard, base_url: str) -> dict:
+    """Write the raw file window by window; stop cleanly on an API error or a guard refusal."""
+    unique: set[str] = set()
+    per_window: dict[str, int] = {}
+    total = 0
+    stopped: Exception | None = None
+
+    def count_page():
+        guard.ledger["pages"] += 1
+
+    with open_private(out) as fh:
+        fh.write(raw_line(header))
+        for (dmin, dmax) in windows:
+            for mt in media_types:
+                if stopped:
+                    break
+                params = build_params(page_ids=target["page_ids"], search_terms=target["search_terms"],
+                                      countries=target["countries"], date_min=dmin, date_max=dmax,
+                                      media_type=mt, limit=limit, token=token,
+                                      search_type=target["search_type"] or "KEYWORD_EXACT_PHRASE")
+                n = 0
+                try:
+                    for ad in iter_ads(transport, base_url, params,
+                                       max_pages=guard.api["max_pages_per_query"], on_page=count_page):
+                        rec = {"type": "ad", "window": [dmin, dmax], "media_type": mt,
+                               "countries": target["countries"], "fetched_at": iso_z(utc_now()), "ad": ad}
+                        fh.write(raw_line(rec))
+                        unique.add(str(ad.get("id")))
+                        n += 1
+                except (MetaApiError, GuardStop) as exc:
+                    stopped = exc
+                    break
+                per_window[f"{dmin}/{mt}"] = n
+                total += n
+                guard.ledger["windows_done"].append(f"{dmin}/{mt}")
+        missing = [w for w in planned if w not in per_window]
+        if stopped:
+            fh.write(raw_line({"type": "stopped", "reason": str(stopped), "records": total,
+                               "windows_missing": missing, "stopped_at": iso_z(utc_now())}))
+        else:
+            fh.write(raw_line({"type": "summary", "records": total, "unique_ads": len(unique),
+                               "per_window": per_window, "finished_at": iso_z(utc_now())}))
+    return {"stopped": stopped, "total": total, "unique": unique, "missing": missing}
+
+
+def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     src = ap.add_argument_group("target")
     src.add_argument("--competitor", help="key from config/competitors.yaml")
     src.add_argument("--page-id", action="append", help="numeric Page ID (repeatable, max 10)")
     src.add_argument("--search-terms", help="keyword query instead of page ids")
-    src.add_argument("--country", action="append", help="ad_reached_countries (repeatable), e.g. GB")
+    src.add_argument("--search-type", choices=SEARCH_TYPES,
+                     help="keyword matching (default KEYWORD_EXACT_PHRASE; KEYWORD_UNORDERED matches the "
+                          "words separately, in any order)")
+    src.add_argument("--country", action="append",
+                     help="ad_reached_countries, any ISO-2 code (repeatable). Outside the EU/UK only "
+                          "political/issue ads exist in the API")
     ap.add_argument("--since", required=True, help="first month, YYYY-MM")
     ap.add_argument("--until", required=True, help="last month, YYYY-MM (inclusive)")
     ap.add_argument("--single-window", action="store_true",
@@ -243,56 +367,41 @@ def main(argv=None) -> int:
             for mt in media_types:
                 params = build_params(page_ids=target["page_ids"], search_terms=target["search_terms"],
                                       countries=target["countries"], date_min=dmin, date_max=dmax,
-                                      media_type=mt, limit=args.limit, token="REDACTED")
+                                      media_type=mt, limit=args.limit, token="REDACTED",
+                                      search_type=target["search_type"] or "KEYWORD_EXACT_PHRASE")
                 print(f"GET {base_url}?{urlencode(params)}")
-        print(f"# {len(windows) * len(media_types)} queries (+ paging). Nothing was sent.", file=sys.stderr)
+        g = guard or Guard(args.data_dir)
+        c = g.counts()
+        print(f"# {len(windows) * len(media_types)} queries (+ paging). Nothing was sent. Guard caps: "
+              f"{g.api['max_calls_per_run']}/run, {c['hour']}/{g.api['max_calls_per_hour']} used this hour, "
+              f"{c['day']}/{g.api['max_calls_per_day']} used in 24h.", file=sys.stderr)
         return 0
 
-    if args.fixture:
+    if transport is not None:  # injected (tests)
+        token, mode = "TEST-NOT-A-REAL-TOKEN", "live"
+        guard = guard or Guard(args.data_dir)
+    elif args.fixture:
         from fixture_api import FixtureTransport
-        transport, token, mode = FixtureTransport(args.fixture), "FIXTURE-NOT-A-REAL-TOKEN", "fixture"
+        guard = guard or Guard(args.data_dir, live=False)
+        transport, token, mode = GuardedFixture(FixtureTransport(args.fixture), guard), "FIXTURE-NOT-A-REAL-TOKEN", "fixture"
     else:
         token = env.get("META_ACCESS_TOKEN")
         if not token:
             sys.exit("META_ACCESS_TOKEN missing. Copy .env.example to .env (see README), "
                      "or use --dry-run / --fixture.")
-        transport, mode = GraphTransport(), "live"
+        guard = guard or Guard(args.data_dir)
+        transport, mode = GraphTransport(guard=guard, retries=guard.api["transient_retries"],
+                                         delays=guard.api["transient_delays_s"]), "live"
 
-    started = utc_now()
-    run_id = started.strftime("%Y%m%dT%H%M%SZ")
-    out = args.data_dir / "raw" / target["key"] / f"{run_id}.jsonl"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    header = {"type": "run", "run_id": run_id, "mode": mode, "api_version": api_version,
-              "target": target, "since": args.since, "until": args.until,
-              "media_types": media_types, "windows": windows, "started_at": iso_z(started)}
-    unique: set[str] = set()
-    total = 0
-    per_window: dict[str, int] = {}
-    with out.open("w") as fh:
-        fh.write(json.dumps(header) + "\n")
-        for (dmin, dmax) in windows:
-            for mt in media_types:
-                params = build_params(page_ids=target["page_ids"], search_terms=target["search_terms"],
-                                      countries=target["countries"], date_min=dmin, date_max=dmax,
-                                      media_type=mt, limit=args.limit, token=token)
-                n = 0
-                for ad in iter_ads(transport, base_url, params):
-                    rec = {"type": "ad", "window": [dmin, dmax], "media_type": mt,
-                           "countries": target["countries"], "fetched_at": iso_z(utc_now()), "ad": ad}
-                    fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                    unique.add(str(ad.get("id")))
-                    n += 1
-                per_window[f"{dmin}/{mt}"] = n
-                total += n
-        summary = {"type": "summary", "records": total, "unique_ads": len(unique),
-                   "per_window": per_window, "finished_at": iso_z(utc_now())}
-        fh.write(json.dumps(summary) + "\n")
-
-    print(f"{mode}: {total} records, {len(unique)} unique ads -> {out}", file=sys.stderr)
-    if not unique:
-        print(zero_ads_note(target["countries"]), file=sys.stderr)
-    print(out)
-    return 0
+    try:
+        with guard.lock():
+            guard.preflight()
+            return run_fetch(target=target, windows=windows, media_types=media_types, since=args.since,
+                             until=args.until, limit=args.limit, transport=transport, token=token, mode=mode,
+                             api_version=api_version, guard=guard, data_dir=args.data_dir)
+    except GuardStop as exc:
+        print(f"guard refused the run: {exc}", file=sys.stderr)
+        return 3
 
 
 if __name__ == "__main__":

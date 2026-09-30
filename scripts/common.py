@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 REPORTS_DIR = ROOT / "reports"
 CONFIG_PATH = ROOT / "config" / "competitors.yaml"
+GUARD_CONFIG_PATH = ROOT / "config" / "guard.yaml"
 SCHEMA_PATH = ROOT / "schemas" / "ad.schema.json"
 
 DEFAULT_API_VERSION = "v26.0"
@@ -26,6 +27,8 @@ EU_UK = frozenset({
 
 # access_token=<value> in a URL or text; also bare "access_token": "<value>" JSON keys.
 _TOKEN_RE = re.compile(r"(access_token=)[^&\s\"']+", re.IGNORECASE)
+# The whole access_token query parameter, with its leading ? or & and any trailing &.
+_TOKEN_PARAM_RE = re.compile(r"([?&])access_token=[^&\s\"']*(&?)", re.IGNORECASE)
 
 
 # --- environment / config -------------------------------------------------
@@ -127,6 +130,20 @@ def scrub_tokens(text: str) -> str:
     return _TOKEN_RE.sub(r"\1REDACTED", text)
 
 
+def strip_token_params(value):
+    """Remove access_token query parameters from every string in a JSON-like value.
+
+    Used before anything is written to data/raw/, so no file on disk holds the token.
+    """
+    if isinstance(value, str):
+        return _TOKEN_PARAM_RE.sub(lambda m: m.group(1) if m.group(2) else "", value)
+    if isinstance(value, list):
+        return [strip_token_params(v) for v in value]
+    if isinstance(value, dict):
+        return {k: strip_token_params(v) for k, v in value.items()}
+    return value
+
+
 def contains_token(text: str) -> bool:
     return "access_token" in text.lower()
 
@@ -141,6 +158,17 @@ def write_json(path: Path, obj) -> None:
     assert_no_token(text, str(path))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
+
+
+def write_private(path: Path, text: str) -> None:
+    """Atomically write a 0600 file (state, ledgers). Refuses text containing access_token."""
+    assert_no_token(text, str(path))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(text)
+    os.replace(tmp, path)
 
 
 def slug(value: str) -> str:

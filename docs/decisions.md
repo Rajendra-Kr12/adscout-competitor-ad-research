@@ -11,6 +11,14 @@ Newest first. Each entry records the decision, why it was made, and the status.
 | 15 | UK reach = `total_reach_by_location["UK"]`; if absent, the sum of the GB age x gender breakdown, labelled "breakdown sum" | UK-only ads carry no `eu_total_reach`, so Phase 0 showed no reach for UK advertisers | Built |
 | 16 | Countries come from the run header, config or `--country`, never code. A query limited to non-EU/UK countries that returns 0 ads gets a plain coverage statement in the fetch output and the report | Captain: "Not just uk.. i should be able to ask any country" | Built |
 | 17 | CTA button, images, video, on-image text and full landing URL are not in `ads_archive`; they are left to the Phase 1 visuals ladder (plan §3.3, decision C5) | ArchivedAd v26.0 reference | Noted |
+| 18 | **P1-02: every Meta call goes through the deterministic `scripts/guard.py`**, with the policy in `config/guard.yaml` (plan §6.2 defaults, plus a breaker of 5 consecutive failures leading to a 15-minute cooldown). State lives in `data/state/guard/`, and ledgers in `data/runs/` | Phase 0 retried a code-4 error 5 times in about 68 s (6 calls), against Meta's "stop making API calls" | Built + tested |
+| 19 | Throttle codes are never retried; only 1/2, HTTP 5xx and network errors are (2/8/30 s). Kill-switch codes: 190, 368, 459, 464, 10, 200-299, 2332002, 2332004, 613/1996. Only a human at a TTY can `unkill` | Plan §6.1 / §6.2 | Built + tested |
+| 20 | Fixture runs also go through the guard (kill switch, lock, run cap, ledger), but are not counted against the hourly/daily Meta caps or cooldowns | Offline runs are not Meta calls, but must still stop when the kill switch is on | Built |
+| 21 | The token is stripped from `ad_snapshot_url` before any raw write (the parameter is removed, not masked, so `grep -r access_token data/` is empty). Raw and ledger files are 0600 | Phase 0 raw files were 0644 and held the token | Built + tested |
+| 22 | `normalize.py` refuses a raw run without its closing `summary` line unless `--allow-partial` is passed. Stopped runs end with a `stopped` line that lists the missing windows | Phase 0 normalized aborted runs silently | Built + tested |
+| 23 | Keyword queries send `search_type`, defaulting to `KEYWORD_EXACT_PHRASE`. The fixture now follows the API: `KEYWORD_UNORDERED` (the API default) matches each word separately | Phase 0 sent no `search_type`, and the fixture pretended an exact match, so tests missed the Explorer behaviour | Built + tested |
+| 24 | `.gitignore` ignores `data/*` except `.gitkeep`, plus `logs/` | `data/state`, `data/runs` and `logs` were committable | Built |
+| 25 | The guard's event log is `data/state/guard/events.jsonl` (token-scrubbed), not `logs/guard.log` | Keeps all guard state under one ignored folder, and lets tests use a temporary data dir. `logs/` is reserved for launchd output (P1-12) | Built |
 
 ## 2026-09-29 - Phase 0 build
 
