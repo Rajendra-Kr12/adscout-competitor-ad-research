@@ -92,3 +92,7 @@ Run `.venv/bin/python scripts/purge_expired.py` for a dry run, then add `--apply
 - Selling or licensing the ad data, or data derived from it, is **not** allowed (Platform Terms §3.a.iv).
 - Sending ad data to Claude is allowed under a Service Provider arrangement (Platform Terms §5.a). Prefer API or commercial terms, and don't enable model-training settings (research D4).
 - Competitor spend, CPM, CPA and ROAS don't exist in any official source. Never estimate or present them as data.
+- In multi-brand runs, `scripts/critique.py check --stage report` blocks spend/CPM/CPA/ROAS claims, non-permalink
+  Meta links and any statement implying full ad detail for a country outside the EU/UK, and
+  `critique.py record` will not accept a critique that drops those blockers. The master may never overrule a
+  compliance blocker.

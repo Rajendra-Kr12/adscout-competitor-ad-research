@@ -155,17 +155,15 @@ def test_fixture_run_writes_dated_per_brand_folders(tmp_path, capsys):
                 assert "access_token" not in f.read_text().lower(), f
 
 
-def test_rebuild_keeps_notes_and_critic_block(tmp_path):
+def test_rebuild_keeps_analyst_notes(tmp_path):
     make(tmp_path, synth_specs()[:1])
     assert run(tmp_path, "--fixture", str(SYNTHETIC)) == 0
     run_dir = tmp_path / "reports" / "synth" / "2026-09-29"
-    idx = run_dir / "index.md"
-    idx.write_text(idx.read_text().replace(run_project.CRITIC_PLACEHOLDER, "Verdict: approve (seeded)"))
     rep = run_dir / "synthetic-uk" / "report.md"
     rep.write_text(rep.read_text().replace("_Not written yet.", "Seeded notes. _Not written yet."))
     calls_before = json.loads((run_dir / "run.json").read_text())["groups"][0]["calls"]
     assert run(tmp_path, "--no-fetch") == 0
-    assert "Verdict: approve (seeded)" in idx.read_text() and "Seeded notes." in rep.read_text()
+    assert "Seeded notes." in rep.read_text()
     manifest = json.loads((run_dir / "run.json").read_text())
     assert manifest["mode"] == "no-fetch" and manifest["groups"][0]["calls"] == calls_before
     assert len(list((tmp_path / "data" / "runs").glob("*.json"))) == 1  # no new fetch

@@ -165,7 +165,23 @@ Competitors live in `config/competitors.yaml`.
 
 ### Multi-brand projects
 
-For 2 or more brands, use a project (`config/projects/<slug>.yaml`, `schemas/project.schema.json`). It
+In Claude Code: `/research-brands "Forest Essentials UK, Pukka Herbs, Kapiva (India)"`
+(`.claude/skills/research-brands/SKILL.md`). The master research agent runs in the main thread:
+
+1. resolves each brand's Page (1 exact-phrase call per unknown brand; you confirm ambiguous Pages);
+2. asks the intake questions in short rounds (`prompts/intake.md`): markets (any countries), window, goal,
+   folder layout, outputs, and preferences for visuals and monitoring, which are saved for later stages.
+   "Use recommended defaults" skips straight to the plan;
+3. runs the read-only `research-critic` sub-agent (`prompts/critic.md`) at three gates: **plan** (coverage
+   per country, Page identity, window, call budget, compliance), **data** (stopped runs, 0-ad brands, other
+   Pages' ads) and **report** (every number and ad ID traced, no spend claims, permalinks only, nothing
+   implying full detail outside the EU/UK). Each finding has evidence and reasoning; choices come back to you
+   as questions. `scripts/critique.py check` computes the findings that must never depend on the LLM, and
+   `critique.py record` refuses a critique that drops one of their blockers;
+4. runs the project through the guard, then `ad-extractor`, then `report-writer` for each brand and for
+   `comparison.md`.
+
+The same steps by hand. For 2 or more brands, use a project (`config/projects/<slug>.yaml`, `schemas/project.schema.json`). It
 saves the intake answers (brands, markets, window, goal, folder layout, outputs, and preferences for
 later stages), so re-runs never ask again. Every answer has a recommended default.
 
@@ -242,16 +258,17 @@ server, and allow only the `ads_library_search` tool.
 config/competitors.yaml      test brands (UK pick not final)
 config/projects/<slug>.yaml  multi-brand research projects (intake answers; no Platform Data)
 schemas/project.schema.json  project file schema (project-v1)
+schemas/critique.schema.json research-critic output (critic-v1)
 schemas/ad.schema.json       per-ad schema v0.2 (research §7.3; additive over v0.1)
 config/guard.yaml            API guard caps and thresholds
 .claude/settings.json        permission deny rules + PreToolUse hook (.claude/hooks/guard_pretool.py)
 .githooks/pre-commit         token / Platform Data commit check
 scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
-                             project, discover_pages, run_project, export_xlsx, mcp_source (stub),
+                             project, discover_pages, run_project, export_xlsx, critique, mcp_source (stub),
                              purge_expired, fixture_api (offline), common
-prompts/                     extraction, rubric, report template (versioned)
-.claude/agents/              ad-extractor, report-writer
-.claude/skills/analyze-competitor/
+prompts/                     extraction, rubric, report and comparison templates, intake, critic (versioned)
+.claude/agents/              ad-extractor, report-writer, research-critic
+.claude/skills/              analyze-competitor (one brand), research-brands (master, several brands)
 data/raw|ads|llm|media/      local only, git-ignored (retention: AGENTS.md); raw files are 0600, token stripped
 data/state/guard/, data/runs/ guard state and run ledgers (git-ignored; data/* is ignored as a whole)
 reports/<target>/            <date>-competitor-report.md and <date>-ads.csv (git-ignored)

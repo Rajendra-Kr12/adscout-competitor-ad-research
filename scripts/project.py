@@ -494,10 +494,17 @@ def _answers(args) -> dict:
         if bad:
             raise ProjectError(f"unknown output(s) {sorted(bad)}")
         a["outputs"] = {"markdown": True, **{k: k in chosen for k in ("xlsx", "csv", "html", "drive")}}
-    if args.visuals:
-        a["visuals"] = {**DEFAULTS["visuals"], "route": args.visuals}
-    if args.monitor:
-        a["monitor"] = {**DEFAULTS["monitor"], "cadence": args.monitor}
+    v = {k: val for k, val in (("route", args.visuals), ("window_days", args.visuals_days),
+                                ("max_ads_per_brand", args.visuals_max), ("video", args.video)) if val is not None}
+    if v:
+        a["visuals"] = {**DEFAULTS["visuals"], **v}
+    m = {k: val for k, val in (("cadence", args.monitor), ("time", args.monitor_time)) if val is not None}
+    if args.watch is not None:
+        m["watch"] = [w for w in args.watch.split(",") if w]
+    if args.alerts is not None:
+        m["alerts"] = [w for w in args.alerts.split(",") if w]
+    if m:
+        a["monitor"] = {**DEFAULTS["monitor"], **m}
     return a
 
 
@@ -511,7 +518,8 @@ def main(argv=None) -> int:
     n.add_argument("project")
     n.add_argument("--brand", action="append", required=True, help="NAME_OR_KEY[:CC+CC][@PAGE_ID] (repeatable)")
     n.add_argument("--title")
-    n.add_argument("--defaults", action="store_true", help="use the recommended defaults for every unanswered field")
+    n.add_argument("--defaults", action="store_true",
+                   help="the 'use recommended defaults' fast path (unanswered fields always take the defaults)")
     n.add_argument("--markets", help="default markets, comma list of ISO-2 codes (default GB)")
     n.add_argument("--months", type=int)
     n.add_argument("--since")
@@ -520,8 +528,16 @@ def main(argv=None) -> int:
     n.add_argument("--layout", choices=LAYOUTS)
     n.add_argument("--output-root")
     n.add_argument("--outputs", help="comma list of markdown,xlsx,csv,html,drive (markdown is always written)")
-    n.add_argument("--visuals", choices=("inbox", "none"))
-    n.add_argument("--monitor", choices=("daily+weekly-digest", "weekly", "daily-digest", "none"))
+    n.add_argument("--visuals", choices=("inbox", "none"), help="Q6, saved for stage 3")
+    n.add_argument("--visuals-days", type=int, help="Q7 window in days (90, 30 or 180)")
+    n.add_argument("--visuals-max", type=int, help="Q7 max ads per brand (30, 15 or 50)")
+    n.add_argument("--video", choices=("keyframes", "transcript", "skip"), help="Q8")
+    n.add_argument("--monitor", choices=("daily+weekly-digest", "weekly", "daily-digest", "none"),
+                   help="Q9, saved for stage 4")
+    n.add_argument("--watch", help="Q10, comma list: new_ads,stopped_ads,offers,copy_changes,creative_changes,"
+                                   "platforms_markets,reach_jumps")
+    n.add_argument("--alerts", help="Q11, comma list: digest,macos,gmail-draft")
+    n.add_argument("--monitor-time", help="Q12, HH:MM")
     n.add_argument("--force", action="store_true", help="overwrite an existing project file")
     for name in ("plan", "show", "validate"):
         p = sub.add_parser(name)

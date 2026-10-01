@@ -25,6 +25,7 @@ import json
 import os
 import statistics
 import sys
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from urllib.parse import urlencode
@@ -32,6 +33,7 @@ from urllib.parse import urlencode
 import build_report
 import normalize
 import project as projects
+from critique import CRITIC_END, CRITIC_START, render_block
 from common import (
     DATA_DIR,
     DEFAULT_API_VERSION,
@@ -48,10 +50,6 @@ from common import (
 from fetch_ads import Session, build_params, fetch_run, open_session
 from guard import Guard, GuardStop
 
-CRITIC_START = "<!-- critic:start -->"
-CRITIC_END = "<!-- critic:end -->"
-CRITIC_PLACEHOLDER = ("_Not reviewed yet. The research-critic gates (plan, data, report) record their verdicts "
-                      "here through `scripts/critique.py record`._")
 STANDARD_CAVEATS = [
     "Competitor spend, impressions, CPM, CPA, ROAS and engagement are not available from any official source.",
     "\"Days running\" is a proxy for what works, not performance data.",
@@ -178,8 +176,7 @@ def fmt(v) -> str:
 
 def build_index(project: dict, manifest: dict, paths: projects.RunPaths) -> str:
     here = paths.index.parent
-    fixture = manifest["mode"] == "fixture" or any("fixture" in b["stats"]["coverage_basis"]
-                                                   for b in manifest["brands"])
+    fixture = is_fixture(manifest)
     L = [f"# Research run: {project.get('title') or project['project']} - {manifest['run_date']}", ""]
     if fixture:
         L += ["> **SYNTHETIC DATA.** Built from test fixtures, not from Meta. Nothing below describes a real "
@@ -221,7 +218,7 @@ def build_index(project: dict, manifest: dict, paths: projects.RunPaths) -> str:
         L += [f"- Group {g['group']} ({', '.join(g['brands'])}): {g['stop_reason']}. Ledger `data/{g['ledger']}`. "
               "The guard decides when a new run may start; do not retry by hand." for g in stopped]
         L.append("")
-    L += ["## Critic", "", CRITIC_START, CRITIC_PLACEHOLDER, CRITIC_END, "", "## Files", ""]
+    L += ["## Critic", "", CRITIC_START, render_block(paths), CRITIC_END, "", "## Files", ""]
     for name, p in (("Workbook", paths.workbook), ("CSV folder", paths.csv_dir), ("Comparison", paths.comparison)):
         if p.exists():
             L.append(f"- {name}: [{rel(p, here)}]({rel(p, here)})")
@@ -239,6 +236,51 @@ def build_index(project: dict, manifest: dict, paths: projects.RunPaths) -> str:
 
 def window_text(w: dict) -> str:
     return f"{w['since']} to {w['until']}" if "since" in w else f"the last {w['months']} months, ending with the run month"
+
+
+def is_fixture(manifest: dict) -> bool:
+    return manifest["mode"] == "fixture" or any("fixture" in b["stats"]["coverage_basis"] for b in manifest["brands"])
+
+
+def build_comparison(project: dict, manifest: dict, data_dir: Path) -> str:
+    """Cross-brand tables from the same numbers as the brand reports, plus the report-writer block."""
+    since, until = manifest["window"]["since"], manifest["window"]["until"]
+    L = [f"# Comparison: {project.get('title') or project['project']} - {manifest['run_date']}", ""]
+    if is_fixture(manifest):
+        L += ["> **SYNTHETIC DATA.** Built from test fixtures, not from Meta. Nothing below describes a real "
+              "advertiser.", ""]
+    L += [f"Window {since} to {until}. Every number comes from `run.json` and `data/ads/`; brands on the Meta Ads "
+          "MCP route (outside the EU/UK) have no fetched ads in this stage and are listed for coverage only.", "",
+          "## Side by side", "",
+          "| Brand | Countries (ads_archive) | Ads | Active | Median days running | New ads with % off "
+          "| Median words per body | Creative-only | Top platforms | UK reach (sum) | LLM |",
+          "|---|---|---|---|---|---|---|---|---|---|---|"]
+    llm_rows = []
+    for e in manifest["brands"]:
+        ads = brand_ads(data_dir, e["key"], since, until)
+        s = e["stats"]
+        words = [x for a in ads for x in a["derived"]["body_words"]]
+        plats = Counter(p for a in ads for p in a["platforms"]).most_common(2)
+        L.append(f"| {e['name']} | {', '.join(e['routes']['ads_archive']) or 'none'} | {s['ads_in_window']} "
+                 f"| {s['active_at_fetch']} | {fmt(s['median_days_running'])} | {s['with_percent_off']} "
+                 f"| {fmt(statistics.median(words)) if words else 'n/a'} | {s['creative_only']} "
+                 f"| {', '.join(f'{p} {n}' for p, n in plats) or '-'} | {fmt(s['uk_reach_sum'])} "
+                 f"| {s['llm_coverage']}/{s['ads_in_window']} |")
+        with_llm = [a for a in ads if a.get("llm")]
+        if with_llm:
+            offers = Counter(a["llm"]["offer"]["type"] for a in with_llm).most_common(3)
+            tones = Counter(t for a in with_llm for t in a["llm"]["tone"]).most_common(3)
+            llm_rows.append(f"| {e['name']} | {len(with_llm)} | {', '.join(f'{k} {v}' for k, v in offers)} "
+                            f"| {', '.join(f'{k} {v}' for k, v in tones)} |")
+    if llm_rows:
+        L += ["", "## Messaging mix (LLM extraction)", "", "| Brand | Ads extracted | Offer types | Tone |",
+              "|---|---|---|---|"] + llm_rows
+    L += ["", "## Coverage", ""] + [f"- **{e['name']}**: {e['coverage_plan']}" for e in manifest["brands"]]
+    L += ["", "## Comparison notes", "", build_report.NARRATIVE_START,
+          "_Not written yet. The report-writer sub-agent fills this block from `prompts/comparison-template.md`. "
+          "Numbers above are authoritative._", build_report.NARRATIVE_END, "",
+          "## Caveats", ""] + [f"- {c}" for c in STANDARD_CAVEATS] + [""]
+    return "\n".join(L)
 
 
 def build_project_md(project: dict, paths: projects.RunPaths) -> str:
@@ -292,11 +334,12 @@ def write_outputs(project: dict, manifest: dict, paths: projects.RunPaths, data_
         csv_text = build_report.ads_csv(ads, b["name"])
         assert_no_token(csv_text, entry["csv"])
         (paths.root / entry["csv"]).write_text(csv_text)
+    build_report.write_report(paths.comparison, build_comparison(project, manifest, data_dir))
     if project["outputs"].get("xlsx") or project["outputs"].get("csv"):
         import export_xlsx  # openpyxl is only needed when the project asks for exports
         export_xlsx.export_run(project, manifest, paths, data_dir)
-    build_report.write_report(paths.index, build_index(project, manifest, paths),
-                              blocks=((CRITIC_START, CRITIC_END),))
+    # The critic block is rendered from the run's critique-<stage>.json files, so it is rebuilt, not kept.
+    build_report.write_report(paths.index, build_index(project, manifest, paths), blocks=())
     projects.point_latest(paths, [b["key"] for b in project["brands"]])
     write_json(paths.manifest, manifest)
     build_report.write_report(paths.project_md, build_project_md(project, paths))

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fbcm.local/schemas/critique.schema.json",
+  "title": "research-critic output (critic-v1)",
+  "description": "One critic gate (plan, data or report) for a research project run. Deterministic checks from scripts/critique.py check use the same shape with source=check; the research-critic sub-agent returns the final critique, keeping every check blocker. Validated by scripts/critique.py validate/record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["prompt_version", "stage", "verdict", "summary", "findings"],
+  "properties": {
+    "prompt_version": { "type": "string", "pattern": "^critic-v[0-9]+$" },
+    "stage": { "enum": ["plan", "data", "report"] },
+    "verdict": { "enum": ["approve", "revise", "block"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "project": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "category", "claim", "evidence", "reasoning", "fix"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Z]+[0-9]+$" },
+          "severity": { "enum": ["blocker", "major", "minor"] },
+          "category": { "enum": ["coverage", "compliance", "budget", "identity", "data-quality", "method", "claim"] },
+          "claim": { "type": "string", "minLength": 1, "description": "What is wrong or risky" },
+          "evidence": { "type": "string", "minLength": 1, "description": "file:line, a number from run.json or a ledger, or a doc quote" },
+          "reasoning": { "type": "string", "minLength": 1, "description": "2-4 sentences: why it matters, step by step" },
+          "fix": { "type": "string", "minLength": 1, "description": "The concrete change" },
+          "brands": { "type": "array", "items": { "type": "string" }, "description": "Brand keys the finding is about; omit for project-wide findings" },
+          "source": { "enum": ["check", "critic"], "description": "check = scripts/critique.py check; critic = the research-critic's own judgement" },
+          "ask_user": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["question", "options", "recommended"],
+            "properties": {
+              "question": { "type": "string", "minLength": 1 },
+              "options": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "string", "minLength": 1 } },
+              "recommended": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -22,6 +22,7 @@ Setup, usage and coverage caveats: `README.md`. Decisions: `docs/decisions.md`. 
 - Deterministic numbers come from scripts. Judgement comes from the sub-agents in `.claude/agents/`, and their output is validated against `schemas/ad.schema.json` (v0.2; `SCHEMA_VERSION` lives in `scripts/text_metrics.py`, keep changes additive and let `upgrade_ad` migrate old files). If you change a prompt in `prompts/`, bump its version (`extract-v1`).
 - Test brands and Page IDs live in `config/competitors.yaml`, not in code. Countries come from config, a project or `--country`; never hard-code GB. Outside the EU/UK, 0 commercial ads is coverage, not an error, and outputs must say so.
 - Multi-brand work goes through projects (`config/projects/<slug>.yaml`; `scripts/project.py`, `discover_pages.py`, `run_project.py`; README "Multi-brand projects"). Any country per brand: EU/UK routes to `ads_archive`, everything else to the Meta Ads MCP route, which is a stub until the captain connects it (`scripts/mcp_source.py`) and gives headlines and dates only. Never present it as full detail. Page IDs are confirmed by the user, never guessed.
+- `/research-brands` is the master: it runs in the main thread (only it can ask the user) and calls the read-only `research-critic` at the plan, data and report gates. Record critiques only through `scripts/critique.py record`; a blocker from `critique.py check` must be fixed, never dropped. If you change `prompts/intake.md` or `prompts/critic.md`, bump their versions.
 
 ## Maintaining this file
 
