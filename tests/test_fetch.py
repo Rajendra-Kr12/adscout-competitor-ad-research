@@ -155,7 +155,8 @@ def test_high_app_usage_is_handled_by_the_guard(tmp_path):
 # --- CLI modes -------------------------------------------------------------
 
 def test_dry_run_sends_nothing_and_redacts(capsys):
-    assert fetch_ads.main(["--competitor", "kapiva", "--since", "2026-01", "--until", "2026-03", "--dry-run"]) == 0
+    assert fetch_ads.main(["--search-terms", "Kapiva", "--country", "IN", "--since", "2026-01", "--until", "2026-03",
+                           "--dry-run"]) == 0
     out = capsys.readouterr().out.strip().splitlines()
     assert len(out) == 3
     assert all("access_token=REDACTED" in line and "search_terms=Kapiva" in line for line in out)

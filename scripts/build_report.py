@@ -145,7 +145,7 @@ def ad_card(a: dict) -> list[str]:
          f"| Platforms | {cell(platforms_text(a)) or '_none_'} |",
          f"| Languages | {cell(', '.join(a['languages'])) or '_none_'} |",
          f"| Media type | {cell(a['media_type_hint']) or '_not queried per type_'} |",
-         f"| Text | {'creative-only (no primary text; the visual carries the ad)' if der['text_status'] == 'creative-only' else 'has text'} |",
+         f"| Text | {TEXT_STATUS.get(der['text_status'], der['text_status'])} |",
          f"| Headline | {variants_cell(der['variants_unique']['link_titles'])} |",
          f"| Link description | {variants_cell(der['variants_unique']['link_descriptions'])} |",
          f"| Caption / display link | {variants_cell(der['variants_unique']['link_captions'])} |"]
@@ -282,8 +282,18 @@ def default_window(ads_all: list[dict], since: str | None, until: str | None, to
     return since or (starts[0] if starts else today.strftime("%Y-%m")), until or today.strftime("%Y-%m")
 
 
+TEXT_STATUS = {
+    "has_text": "has text",
+    "creative-only": "creative-only (no primary text; the visual carries the ad)",
+    "headline-only": "headline-only (Meta Ads MCP returns no primary text)",
+}
+
+
 def build(ads_all: list[dict], target: str, since: str | None, until: str | None,
-          competitor: dict | None, today: date, countries: list[str] | None = None) -> str:
+          competitor: dict | None, today: date, countries: list[str] | None = None,
+          queried: list[str] | None = None, caveats: tuple[str, ...] = ()) -> str:
+    """queried: countries actually sent to ads_archive when they differ from `countries` (project runs
+    route non-EU/UK countries elsewhere); caveats: extra coverage bullets."""
     since, until = default_window(ads_all, since, until, today)
     months = months_between(parse_month(since), parse_month(until))
     ads = window_ads(ads_all, since, until)
@@ -301,7 +311,11 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
 
     w(f"# Competitor ad report: {name}")
     w("")
-    w(f"- Target: `{target}`" + (f" - countries queried: {', '.join(countries)}" if countries else ""))
+    if queried is not None and sorted(queried) != sorted(countries):
+        w(f"- Target: `{target}` - countries: {', '.join(countries)}; sent to ads_archive: "
+          f"{', '.join(queried) or 'none'}")
+    else:
+        w(f"- Target: `{target}`" + (f" - countries queried: {', '.join(countries)}" if countries else ""))
     w(f"- Window: {since} to {until} ({len(months)} months)")
     w(f"- Generated: {today.isoformat()} from {len(runs)} fetch run(s): {', '.join(runs) or 'none'}; "
       f"API {', '.join(api_versions) or 'n/a'}")
@@ -318,6 +332,8 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
         w(f"- {c} ad(s): {BASIS_TEXT.get(b, b)}")
     if competitor and competitor.get("coverage_note"):
         w(f"- Expected coverage for this target: {cell(competitor['coverage_note'])}")
+    for c in caveats:
+        w(f"- {cell(c)}")
     w("- The official Ad Library API (`ads_archive`) returns commercial ads **only if they were "
       "delivered to the EU or UK** (past year). Ads shown only in other countries (for example "
       "India-only campaigns) are missing here even when the Ad Library website shows them.")
@@ -339,7 +355,11 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
          if with_llm else "") + ".")
     w("")
     if n == 0:
-        if countries and not set(countries) & (EU_UK | {"ALL"}):
+        if queried == []:
+            w(f"**No ads were fetched.** None of this brand's countries ({', '.join(countries)}) is covered by "
+              "`ads_archive` for commercial ads, and the Meta Ads MCP route is not connected in this stage. "
+              "That is a coverage limit, not an error, and it does not prove the advertiser ran no ads.")
+        elif countries and not set(countries) & (EU_UK | {"ALL"}):
             w(f"**No ads were returned for this window.** Meta's Ad Library API only covers commercial ads "
               f"delivered to the EU/UK, and this query asked for {', '.join(countries)} only. An empty result "
               "here is the API's coverage limit, not an error, and it does not prove the advertiser ran no ads.")
@@ -504,6 +524,27 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
     return "\n".join(L)
 
 
+def keep_block(old: str, new: str, start: str = NARRATIVE_START, end: str = NARRATIVE_END) -> str:
+    """Carry the text between start/end markers from an older file into a rebuilt one."""
+    if start in old and end in old and start in new and end in new:
+        keep = old.split(start, 1)[1].split(end, 1)[0]
+        head, rest = new.split(start, 1)
+        return head + start + keep + end + rest.split(end, 1)[1]
+    return new
+
+
+def write_report(out: Path, text: str, blocks: tuple[tuple[str, str], ...] = ((NARRATIVE_START, NARRATIVE_END),)) -> None:
+    """Write a report, keeping hand- or agent-written marker blocks (analyst notes) from the old file."""
+    assert_no_token(text, str(out))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    if out.exists():
+        old = out.read_text()
+        for start, end in blocks:
+            text = keep_block(old, text, start, end)
+        assert_no_token(text, str(out))
+    out.write_text(text)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="normalized ads -> monthly markdown report")
     ap.add_argument("--target", required=True)
@@ -527,15 +568,7 @@ def main(argv=None) -> int:
     csv_text = ads_csv(window_ads(ads_all, since, until), (competitor or {}).get("name") or args.target)
     csv_out = out.with_name(f"{today.isoformat()}-ads.csv")
     assert_no_token(csv_text, str(csv_out))
-    out.parent.mkdir(parents=True, exist_ok=True)
-    if out.exists():
-        # Keep an existing analyst narrative when the numbers are rebuilt.
-        old = out.read_text()
-        if NARRATIVE_START in old and NARRATIVE_END in old:
-            keep = old.split(NARRATIVE_START, 1)[1].split(NARRATIVE_END, 1)[0]
-            head, rest = text.split(NARRATIVE_START, 1)
-            text = head + NARRATIVE_START + keep + NARRATIVE_END + rest.split(NARRATIVE_END, 1)[1]
-    out.write_text(text)
+    write_report(out, text)
     csv_out.write_text(csv_text)
     print(out)
     print(csv_out)

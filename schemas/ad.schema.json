@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://fbcm.local/schemas/ad.schema.json",
   "title": "Normalized Ad Library ad (schema v0.2)",
-  "description": "One ad from ads_archive, normalized. See docs/research/fbcm-research-r1.md section 7.3. ad_snapshot_url is never stored here because it embeds the access token. v0.2 is additive over v0.1: derived.text_status, derived.variants_unique, derived.uk_reach, derived.reach_by_country.",
+  "description": "One ad from ads_archive, normalized. See docs/research/fbcm-research-r1.md section 7.3. ad_snapshot_url is never stored here because it embeds the access token. v0.2 is additive over v0.1: derived.text_status, derived.variants_unique, derived.uk_reach, derived.reach_by_country; text_status headline-only for Meta Ads MCP records (P1-05).",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "library_id", "page", "permalink", "coverage_basis", "dates", "platforms", "languages", "media_type_hint", "text", "eu_metrics", "political_metrics", "derived", "llm", "creative", "provenance"],
@@ -78,7 +78,7 @@
         "first_line": { "type": ["string", "null"] },
         "landing_domain": { "type": ["string", "null"] },
         "near_duplicate_of": { "type": ["string", "null"] },
-        "text_status": { "enum": ["has_text", "creative-only"], "description": "creative-only = no primary text; only the visuals carry the ad" },
+        "text_status": { "enum": ["has_text", "creative-only", "headline-only"], "description": "creative-only = no primary text; only the visuals carry the ad. headline-only = a Meta Ads MCP record (coverage_basis mcp_library_search), whose source returns the headline but no primary text" },
         "variants_unique": {
           "type": "object",
           "additionalProperties": false,

@@ -115,12 +115,13 @@ def normalize_ad(rec: dict, header: dict, media_hint: str | None, existing: dict
     political = {k: ad[k] for k in POLITICAL_FIELDS if k in ad}
     llm = (existing or {}).get("llm")
     prov_old = (existing or {}).get("provenance") or {}
+    basis = coverage_basis(ad, header)
     out = {
         "schema_version": SCHEMA_VERSION,
         "library_id": str(ad["id"]),
         "page": {"id": str(ad["page_id"]) if ad.get("page_id") else None, "name": ad.get("page_name")},
         "permalink": permalink(ad["id"]),
-        "coverage_basis": coverage_basis(ad, header),
+        "coverage_basis": basis,
         "dates": build_dates(ad, rec["fetched_at"]),
         "platforms": _strs(ad.get("publisher_platforms")),
         "languages": _strs(ad.get("languages")),
@@ -128,7 +129,7 @@ def normalize_ad(rec: dict, header: dict, media_hint: str | None, existing: dict
         "text": text,
         "eu_metrics": eu or None,
         "political_metrics": political or None,
-        "derived": compute(text, eu),
+        "derived": compute(text, eu, basis),
         "llm": llm,
         "creative": None,
         "provenance": {
@@ -143,17 +144,33 @@ def normalize_ad(rec: dict, header: dict, media_hint: str | None, existing: dict
 
 
 def normalize_run(raw_path: Path, data_dir: Path = DATA_DIR, only_page_id: str | None = None,
-                  allow_partial: bool = False) -> Path:
+                  allow_partial: bool = False, page_map: dict[str, str] | None = None) -> Path:
+    """Normalize one raw run into data/ads/<key>/.
+
+    page_map ({page_id: brand_key}) splits a grouped multi-Page run (scripts/run_project.py) into
+    one folder per brand; ads from Pages not in the map are dropped. Returns data/ads/ in that case.
+    """
     header, records = read_run(raw_path, allow_partial)
-    key = header["target"]["key"]
-    out_dir = data_dir / "ads" / key
+    if page_map is not None:
+        by_key: dict[str, list[dict]] = {k: [] for k in page_map.values()}
+        for rec in records:
+            key = page_map.get(str(rec["ad"].get("page_id")))
+            if key:
+                by_key[key].append(rec)
+        for key, recs in by_key.items():
+            _normalize_records(recs, header, data_dir / "ads" / key, raw_path)
+        return data_dir / "ads"
+    if only_page_id:
+        records = [r for r in records if str(r["ad"].get("page_id")) == str(only_page_id)]
+    return _normalize_records(records, header, data_dir / "ads" / header["target"]["key"], raw_path)
+
+
+def _normalize_records(records: list[dict], header: dict, out_dir: Path, raw_path: Path) -> Path:
     # Last record per library id wins (latest fetch); media hint from any typed query.
     latest: dict[str, dict] = {}
     hints: dict[str, str] = {}
     for rec in records:
         lid = str(rec["ad"]["id"])
-        if only_page_id and str(rec["ad"].get("page_id")) != str(only_page_id):
-            continue
         latest[lid] = rec
         if rec.get("media_type") and rec["media_type"] != "ALL":
             hints[lid] = rec["media_type"]

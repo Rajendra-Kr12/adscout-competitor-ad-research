@@ -2,6 +2,25 @@
 
 Newest first. Each entry records the decision, why it was made, and the status.
 
+## 2026-10-01 - Phase 1 M2 "multi-brand master" (captain: "merge and go for next")
+
+C1 (intake questions), C3 (folder layout) and C4 (outputs) are still open captain calls. They are built as
+intake questions the user answers at run time, with the plan's recommended answers as defaults and a
+"use recommended defaults" fast path, so no answer is baked in.
+
+| # | Decision | Why | Status |
+|---|---|---|---|
+| 33 | **Meta Ads MCP spike result** (firstmate `fbcm-p1-mcp-spike`, 2026-09-30): `ads_library_search` returns commercial ads for any country (IN, US, GB tested) but only 8 fields (id, Page, headline, creation/start time, public permalink, currency); at most 50 newest per call, no pagination, no body, CTA, media, reach or stop date; outside the EU/UK effectively live ads only; needs the captain's OAuth login and an active ad account; its own description forbids bulk extraction. **Go for any-country discovery and monitoring, no-go for media (L2)** | Live calls, read-only tool only, write tools disabled | Recorded |
+| 34 | **P1-05: the MCP route is an interface stub, not connected** (`scripts/mcp_source.py`): request planning, a `McpLibrarySource` whose `search` always raises `McpNotConnected`, and the mapping of its 8 fields to `ad.schema.json` (`coverage_basis: mcp_library_search`). Nothing sends a request | Connecting needs the captain's login; the brief says not to connect or call it in this stage. A connected version must still go through `guard.py`, use `page_ids`, and stay at a few calls per brand per day | Built + tested |
+| 35 | `derived.text_status` gains `headline-only` for MCP records (no primary text by source), distinct from `creative-only` (no text in the ad). Additive enum value, so the schema stays v0.2 | A thin MCP record must not read as a text-less creative, or as a full one | Built |
+| 36 | **Projects** live in `config/projects/<slug>.yaml` (`schemas/project.schema.json`, `project-v1`), written by `scripts/project.py`. They hold brand names, public Page IDs and preferences only, so they may be committed (like `competitors.yaml`, decision #9). Visuals, monitoring, HTML and Drive answers are saved as preferences and produce nothing yet | Re-runs and later scheduled runs must never re-ask (plan §1.4) | Built + tested |
+| 37 | **Any country per brand.** Brand spec `NAME_OR_KEY[:CC+CC][@PAGE_ID]`; codes are validated ISO-2 (`UK` -> `GB`). EU/UK countries route to `ads_archive`; every other country routes to the MCP stub. Each brand's derived `coverage.plan` states in plain words what its countries give, and is copied into its report, `index.md` and `project.md` | Captain: "Not just uk.. i should be able to ask any country". Outputs must not imply full detail where only discovery exists | Built + tested |
+| 38 | `run_project.py` batches brands with the same EU/UK country set into groups of up to 10 Page IDs (one brand is never split), one query per month window, and splits the group's raw file per brand at normalize time (`normalize_run(page_map=...)`). The first group that stops ends the run; later groups are not queried | `search_page_ids` takes 10 IDs, so 10 brands cost about one query per window. Stopping keeps "never retry throttles" true across groups | Built + tested |
+| 39 | `discover_pages.py` spends exactly 1 call per unresolved brand: `KEYWORD_EXACT_PHRASE`, fields `id,page_id,page_name`, first page only. It lists candidates and never picks one; the user confirms with `project.py set-page` | Keyword results include other Pages; the Page choice is the user's | Built + tested |
+| 40 | Layouts `project/date/brand` (default), `brand/date` and `flat`, with `latest` symlinks. `output_root` must be `reports` or an absolute path outside the repo | C3 stays the user's choice. Anywhere else inside the repo would not be git-ignored | Built + tested |
+| 41 | Each run writes `run.json` (groups, calls, ledgers, per-brand status and numbers, no ad text) next to `index.md`. Rebuilds (`--no-fetch`) keep the report-writer notes and the `index.md` critic block | Exports and the critic read one deterministic manifest instead of re-deriving it | Built + tested |
+| 42 | `config/competitors.yaml`: Forest Essentials UK `100331625781604` verified; Kapiva main Page `1721818904736494` (two more Pages noted) | Confirmed by the MCP spike's `page_ids` queries | Done |
+
 ## 2026-09-30 - Phase 1 M1 "safe + visible" (plan: firstmate `fbcm-p1-plan`, captain "go")
 
 | # | Decision | Why | Status |
@@ -46,7 +65,7 @@ Newest first. Each entry records the decision, why it was made, and the status.
 
 ## Deferred (out of Phase 0)
 
-- **Step-0 coverage spike with the Meta Ads MCP** (`https://mcp.facebook.com/ads`, tool `ads_library_search`): run it once access exists, to learn whether it returns non-EU (for example India-only) commercial ads. See README "Step 0". Not wired into the pipeline.
+- ~~Step-0 coverage spike with the Meta Ads MCP~~: done 2026-09-30, see #33.
 - Creative and video analysis (Phase 1): per-ad, on-demand media download, kept for 90 days.
 - Similarity (Phase 2), own-account insights through the Ads MCP (Phase 3), and Messenger (Phase 4).
 

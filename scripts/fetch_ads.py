@@ -21,6 +21,7 @@ import json
 import os
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -243,9 +244,11 @@ def raw_line(rec: dict) -> str:
     return line + "\n"
 
 
-def run_fetch(*, target: dict, windows, media_types, since: str, until: str, limit: int,
+def fetch_run(*, target: dict, windows, media_types, since: str, until: str, limit: int,
               transport, token: str | None, mode: str, api_version: str, guard: Guard,
-              data_dir: Path) -> int:
+              data_dir: Path) -> dict:
+    """One guarded fetch run for one target. Returns rc (0 ok, 2 API stop, 3 guard stop),
+    the raw path, record counts and the ledger path. The caller holds the guard lock."""
     started = utc_now()
     run_id = started.strftime("%Y%m%dT%H%M%SZ")
     out = data_dir / "raw" / target["key"] / f"{run_id}.jsonl"
@@ -267,18 +270,28 @@ def run_fetch(*, target: dict, windows, media_types, since: str, until: str, lim
         guard.close_run("error", stop_reason=scrub_tokens(f"{type(exc).__name__}: {exc}"))
         raise
     stopped, total, unique = result["stopped"], result["total"], result["unique"]
+    calls = guard.run_calls
     ledger = guard.close_run("stopped" if stopped else "ok", windows_missing=result["missing"],
                              records=total, unique_ads=len(unique),
                              stop_reason=str(stopped) if stopped else None)
-    if stopped:
-        print(f"{mode}: STOPPED after {guard.run_calls} call(s), {total} records: {stopped}", file=sys.stderr)
+    rc = (3 if isinstance(stopped, GuardStop) else 2) if stopped else 0
+    return {"rc": rc, "raw": out, "run_id": run_id, "records": total, "unique_ads": len(unique),
+            "calls": calls, "stopped": stopped, "missing": result["missing"], "ledger": ledger}
+
+
+def run_fetch(**kwargs) -> int:
+    res = fetch_run(**kwargs)
+    mode, out = kwargs["mode"], res["raw"]
+    if res["stopped"]:
+        print(f"{mode}: STOPPED after {res['calls']} call(s), {res['records']} records: {res['stopped']}",
+              file=sys.stderr)
         print(f"partial run (normalize.py refuses it without --allow-partial): {out}", file=sys.stderr)
-        print(f"ledger: {ledger}", file=sys.stderr)
-        return 3 if isinstance(stopped, GuardStop) else 2
-    print(f"{mode}: {total} records, {len(unique)} unique ads in {guard.run_calls} call(s) -> {out}",
+        print(f"ledger: {res['ledger']}", file=sys.stderr)
+        return res["rc"]
+    print(f"{mode}: {res['records']} records, {res['unique_ads']} unique ads in {res['calls']} call(s) -> {out}",
           file=sys.stderr)
-    if not unique:
-        print(zero_ads_note(target["countries"]), file=sys.stderr)
+    if not res["unique_ads"]:
+        print(zero_ads_note(kwargs["target"]["countries"]), file=sys.stderr)
     print(out)
     return 0
 
@@ -339,6 +352,43 @@ def check_token_status(token: str, guard: Guard, api_version: str, data_dir: Pat
         print(f"token status check failed (continuing): {exc}", file=sys.stderr)
 
 
+@dataclass
+class Session:
+    """A guarded transport plus the token it sends (live) or a placeholder (fixture/test)."""
+    transport: object
+    token: str
+    mode: str
+    guard: Guard
+    check_token: bool
+
+    def preflight(self, api_version: str, data_dir: Path) -> None:
+        """Kill switch and cooldown, then the daily token check for live runs. Call inside the lock."""
+        self.guard.preflight()
+        if self.check_token:
+            check_token_status(self.token, self.guard, api_version, data_dir)
+            self.guard.preflight()  # debug_token may have tripped the kill switch
+
+
+def open_session(*, fixture: Path | None, env_file: Path, data_dir: Path, guard: Guard | None = None) -> Session:
+    """Fixture transport (offline, still guarded) or the live Graph transport with the stored token."""
+    if fixture:
+        from fixture_api import FixtureTransport
+        guard = guard or Guard(data_dir, live=False)
+        return Session(GuardedFixture(FixtureTransport(fixture), guard), "FIXTURE-NOT-A-REAL-TOKEN", "fixture",
+                       guard, False)
+    guard = guard or Guard(data_dir)
+    try:
+        token, source = get_token(guard.cfg, data_dir, env_path=env_file)
+    except TokenStoreError as exc:
+        sys.exit(f"token store: {exc}")
+    if not token:
+        sys.exit(f"No Meta token in the {source} store. See README 'Long-lived token' "
+                 "(scripts/token_cli.py), or use --dry-run / --fixture.")
+    transport = GraphTransport(guard=guard, retries=guard.api["transient_retries"],
+                               delays=guard.api["transient_delays_s"])
+    return Session(transport, token, "live", guard, True)
+
+
 def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     src = ap.add_argument_group("target")
@@ -392,36 +442,17 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
               f"{c['day']}/{g.api['max_calls_per_day']} used in 24h.", file=sys.stderr)
         return 0
 
-    check_token = False
     if transport is not None:  # injected (tests)
-        token, mode = "TEST-NOT-A-REAL-TOKEN", "live"
-        guard = guard or Guard(args.data_dir)
-    elif args.fixture:
-        from fixture_api import FixtureTransport
-        guard = guard or Guard(args.data_dir, live=False)
-        transport, token, mode = GuardedFixture(FixtureTransport(args.fixture), guard), "FIXTURE-NOT-A-REAL-TOKEN", "fixture"
+        session = Session(transport, "TEST-NOT-A-REAL-TOKEN", "live", guard or Guard(args.data_dir), False)
     else:
-        guard = guard or Guard(args.data_dir)
-        try:
-            token, source = get_token(guard.cfg, args.data_dir, env_path=args.env_file)
-        except TokenStoreError as exc:
-            sys.exit(f"token store: {exc}")
-        if not token:
-            sys.exit(f"No Meta token in the {source} store. See README 'Long-lived token' "
-                     "(scripts/token_cli.py), or use --dry-run / --fixture.")
-        transport, mode = GraphTransport(guard=guard, retries=guard.api["transient_retries"],
-                                         delays=guard.api["transient_delays_s"]), "live"
-        check_token = True
-
+        session = open_session(fixture=args.fixture, env_file=args.env_file, data_dir=args.data_dir, guard=guard)
     try:
-        with guard.lock():
-            guard.preflight()
-            if check_token:
-                check_token_status(token, guard, api_version, args.data_dir)
-                guard.preflight()  # debug_token may have tripped the kill switch
+        with session.guard.lock():
+            session.preflight(api_version, args.data_dir)
             return run_fetch(target=target, windows=windows, media_types=media_types, since=args.since,
-                             until=args.until, limit=args.limit, transport=transport, token=token, mode=mode,
-                             api_version=api_version, guard=guard, data_dir=args.data_dir)
+                             until=args.until, limit=args.limit, transport=session.transport,
+                             token=session.token, mode=session.mode, api_version=api_version,
+                             guard=session.guard, data_dir=args.data_dir)
     except GuardStop as exc:
         print(f"guard refused the run: {exc}", file=sys.stderr)
         return 3

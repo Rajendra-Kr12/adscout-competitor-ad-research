@@ -2,7 +2,7 @@
 # key            - used as the folder name under data/ and reports/
 # page_id        - numeric Facebook Page ID (string). null = unknown; use search_terms
 #                  first and read page_id from the results.
-# page_id_verified - false until an ads_archive call has confirmed it.
+# page_id_verified - false until an official API call (ads_archive or Meta's Ads MCP) has confirmed it.
 # countries      - ad_reached_countries for the query (ISO-2).
 # coverage_note  - what we expect the API to return; copied into the report.
 
@@ -10,20 +10,21 @@ competitors:
   - key: kapiva
     name: Kapiva
     page_url: https://www.facebook.com/kapiva.official
-    page_id: null
-    page_id_verified: false
+    page_id: "1721818904736494"   # main Page; also 116568587707681 (Daily Wellness Solutions by Kapiva)
+    page_id_verified: true        # and 104968639165111 (Kapiva Performance). Ads MCP spike, 2026-09-30
     search_terms: Kapiva
     countries: [IN]
     role: test-india-only
     coverage_note: >-
       India-only D2C brand. ads_archive returns commercial ads only when they were
-      delivered to the EU/UK, so an empty result is expected. This probes the India gap.
+      delivered to the EU/UK, so an empty result is expected. Meta's Ads MCP does list its
+      live IN ads, but only headline, start date and permalink (2026-09-30 spike).
 
   - key: forest-essentials-uk
     name: Forest Essentials UK
     page_url: https://www.facebook.com/Forest-Essentials-UK-100331625781604
     page_id: "100331625781604"
-    page_id_verified: false   # inferred from the Page slug; confirm with a keyword query
+    page_id_verified: true    # an Ads MCP page_ids query returned only "Forest Essentials UK" (2026-09-30)
     search_terms: Forest Essentials
     countries: [GB]
     role: test-uk-primary

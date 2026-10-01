@@ -13,9 +13,14 @@ It never scrapes or automates facebook.com. See `AGENTS.md` and `docs/compliance
   Political and issue ads are covered worldwide for 7 years. An India-only brand (for example
   Kapiva) is **expected to return 0 ads**, even though the Ad Library website shows them.
   Every report states its coverage basis.
-- **Any country can be queried** (`--country` takes any ISO-2 code, repeatable). For a country
-  outside the EU/UK the report says plainly that the API only covers commercial ads delivered to
-  the EU/UK, so an empty result is coverage, not an error.
+- **Any country can be queried** (`--country` takes any ISO-2 code, repeatable; a project takes any
+  countries per brand). For a country outside the EU/UK the report says plainly that the API only
+  covers commercial ads delivered to the EU/UK, so an empty result is coverage, not an error.
+- **Outside the EU/UK, Meta's Ads MCP (`ads_library_search`) is the only official route**, and it gives
+  discovery only: headline, start date, Page and permalink for live ads, at most 50 newest per call,
+  no body text, CTA, media, reach or stop date (tested 2026-09-30). It is **not connected yet**: it
+  needs your own Meta login and an active ad account. Projects record it as each such brand's
+  coverage plan; full text and visuals there will come from the screenshot checklist (stage 3).
 - Competitor **spend, impressions, CPM, CPA, ROAS and engagement are not available** from any
   official source. UK/EU-delivered ads carry reach (UK reach from `total_reach_by_location`, else
   the sum of the GB age x gender breakdown, labelled as such), age x gender breakdowns and targeting.
@@ -158,6 +163,38 @@ can set `search_type` in `config/competitors.yaml`. Add
 `--media-types IMAGE,VIDEO,MEME,NONE` to label media types. This costs one query per type.
 Competitors live in `config/competitors.yaml`.
 
+### Multi-brand projects
+
+For 2 or more brands, use a project (`config/projects/<slug>.yaml`, `schemas/project.schema.json`). It
+saves the intake answers (brands, markets, window, goal, folder layout, outputs, and preferences for
+later stages), so re-runs never ask again. Every answer has a recommended default.
+
+```bash
+$PY scripts/project.py new ayurveda-uk --brand forest-essentials-uk --brand "Pukka Herbs" --brand "Kapiva:IN"
+$PY scripts/discover_pages.py --project ayurveda-uk          # 1 exact-phrase call per brand without a Page ID
+$PY scripts/project.py set-page ayurveda-uk pukka-herbs <page_id> --source discovery   # after you confirm it
+$PY scripts/project.py plan ayurveda-uk                      # brands, routes, coverage, call estimate vs caps
+$PY scripts/run_project.py ayurveda-uk --dry-run             # the exact requests; nothing is sent
+$PY scripts/run_project.py ayurveda-uk                       # fetch through the guard, then write outputs
+$PY scripts/run_project.py ayurveda-uk --no-fetch            # rebuild outputs from data/ads (no API calls)
+```
+
+- **Brand spec:** `NAME_OR_KEY[:CC+CC][@PAGE_ID]`. Keys from `config/competitors.yaml` bring their
+  Page ID. Countries are any ISO-2 codes (`UK` is read as Meta's `GB`); without them the project's
+  `markets` apply.
+- **Routing:** EU/UK countries go to `ads_archive` (full detail). Other countries go to the Meta Ads MCP
+  route, which is a stub in this stage, so those brands get a report that states their coverage plan
+  and 0 fetched ads. Brands without a Page ID are reported as unresolved, never guessed.
+- **Calls:** brands that share a country set are batched, up to 10 Page IDs per `ads_archive` query, so a
+  group costs one query per month window (+ paging). `--single-window` makes it one query per group.
+- **Folders** (`layout`, chosen at intake; `output_root` is `reports` or an absolute path outside the repo):
+  - `project/date/brand` (default): `reports/<p>/<date>/index.md`, `run.json`, `<brand>/report.md`,
+    `<brand>/ads.csv`, plus `reports/<p>/latest -> <date>` and `reports/<p>/project.md`
+  - `brand/date`: `reports/<p>/<brand>/<date>/...`, with run files in `reports/<p>/runs/<date>/`
+  - `flat`: Phase 0 names, `reports/<brand>/<date>-competitor-report.md`, run files in `reports/<p>/`
+- `index.md` has the cross-brand table, each brand's coverage plan, what was not fetched and why, and a
+  critic block. Rebuilding keeps the report-writer notes and the critic block.
+
 ### What the report contains
 
 `reports/<target>/<date>-competitor-report.md` has the summary, per-month tables and ledger, then an
@@ -182,29 +219,28 @@ shape. The India-only fixture Page (`--page-id 900000000000002 --country IN`) re
 Page `900000000000003` has a GB-only ad (UK reach, no EU reach), a `creative-only` ad, a DE/AT ad
 (`--country DE`) and a US-only ad that is never returned (`--country US` shows the coverage message).
 
-## Step 0 coverage spike (run once access exists; not automated)
+## Meta Ads MCP (tested, not connected)
 
-The open question is whether Meta's hosted Ads MCP tool `ads_library_search` returns
-**non-EU commercial ads** (for example Kapiva in India), which `ads_archive` cannot.
-
-```bash
-claude mcp add --transport http meta-ads https://mcp.facebook.com/ads   # log in when prompted
-```
-
-In Claude Code, ask it to search the Ad Library for Kapiva (IN) and Forest Essentials UK (GB).
-Record which fields, countries and media links come back, and add the result to `docs/decisions.md`.
-If you later connect your own ad account, first block write actions under Business Suite >
-Settings > Integrations > Ads MCP server.
+The Step-0 spike ran on 2026-09-30 (`docs/decisions.md` #33-#35). `ads_library_search` returns commercial
+ads for any country, with only 8 fields (id, Page, headline, creation/start time, permalink, currency) and
+no media, so it is a discovery and monitoring source, not a replacement for `ads_archive`.
+`scripts/mcp_source.py` is the interface for that route; nothing calls Meta through it yet. Connecting it
+needs your own login (`claude mcp add --transport http meta-ads https://mcp.facebook.com/ads`). The login
+grants write scopes, so first block write actions under Business Suite > Settings > Integrations > Ads MCP
+server, and allow only the `ads_library_search` tool.
 
 ## Layout
 
 ```
 config/competitors.yaml      test brands (UK pick not final)
+config/projects/<slug>.yaml  multi-brand research projects (intake answers; no Platform Data)
+schemas/project.schema.json  project file schema (project-v1)
 schemas/ad.schema.json       per-ad schema v0.2 (research §7.3; additive over v0.1)
 config/guard.yaml            API guard caps and thresholds
 .claude/settings.json        permission deny rules + PreToolUse hook (.claude/hooks/guard_pretool.py)
 .githooks/pre-commit         token / Platform Data commit check
 scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
+                             project, discover_pages, run_project, mcp_source (stub),
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report template (versioned)
 .claude/agents/              ad-extractor, report-writer
@@ -212,6 +248,7 @@ prompts/                     extraction, rubric, report template (versioned)
 data/raw|ads|llm|media/      local only, git-ignored (retention: AGENTS.md); raw files are 0600, token stripped
 data/state/guard/, data/runs/ guard state and run ledgers (git-ignored; data/* is ignored as a whole)
 reports/<target>/            <date>-competitor-report.md and <date>-ads.csv (git-ignored)
+reports/<project>/           project.md, latest, dated run folders (layout per project; git-ignored)
 docs/                        research, decisions, compliance
 tests/                       pytest + synthetic fixtures
 ```

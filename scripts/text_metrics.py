@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic text and reach metrics for normalized ads (no LLM).
 
-compute(text, eu_metrics) -> the per-ad `derived` block except near_duplicate_of.
+compute(text, eu_metrics, basis) -> the per-ad `derived` block except near_duplicate_of.
 assign_near_duplicates(ads) -> fills derived.near_duplicate_of across one Page's ads.
 upgrade_ad(ad) -> brings an older normalized ad up to the current schema in memory.
 
@@ -125,7 +125,15 @@ def uk_reach(eu_metrics: dict | None) -> dict | None:
     return None
 
 
-def compute(text: dict, eu_metrics: dict | None = None) -> dict:
+def text_status(bodies: list[str], basis: str | None) -> str:
+    """has_text; creative-only = no primary text at all (catalog / video-only ads, visuals are the only
+    content); headline-only = a Meta Ads MCP record, whose source returns no primary text."""
+    if any(b.strip() for b in bodies):
+        return "has_text"
+    return "headline-only" if basis == "mcp_library_search" else "creative-only"
+
+
+def compute(text: dict, eu_metrics: dict | None = None, basis: str | None = None) -> dict:
     bodies = [b for b in text.get("bodies", []) if b is not None]
     all_text = "\n".join(bodies + text.get("link_titles", []) + text.get("link_descriptions", []))
     first = next((ln.strip() for b in bodies for ln in _nonempty_lines(b)), None)
@@ -142,8 +150,7 @@ def compute(text: dict, eu_metrics: dict | None = None) -> dict:
         "first_line": first[:200] if first else None,
         "landing_domain": landing_domain(text.get("link_captions", [])),
         "near_duplicate_of": None,
-        # creative-only: no primary text at all (catalog / video-only ads). Visuals are the only content.
-        "text_status": "has_text" if any(b.strip() for b in bodies) else "creative-only",
+        "text_status": text_status(bodies, basis),
         "variants_unique": {f: unique_variants(text.get(f, [])) for f in TEXT_FIELDS},
         "uk_reach": uk_reach(eu_metrics),
         "reach_by_country": reach_by_country(eu_metrics.get("age_country_gender_reach_breakdown")),
@@ -154,7 +161,8 @@ def upgrade_ad(ad: dict) -> dict:
     """Recompute derived{} for an ad normalized under an older schema (keeps near_duplicate_of)."""
     if ad.get("schema_version") != SCHEMA_VERSION:
         near = (ad.get("derived") or {}).get("near_duplicate_of")
-        ad["derived"] = {**compute(ad["text"], ad.get("eu_metrics")), "near_duplicate_of": near}
+        ad["derived"] = {**compute(ad["text"], ad.get("eu_metrics"), ad.get("coverage_basis")),
+                        "near_duplicate_of": near}
         ad["schema_version"] = SCHEMA_VERSION
     return ad
 
@@ -190,7 +198,7 @@ def main(argv=None) -> int:
     files = sorted(Path(argv[0]).glob("*.json"))
     ads = [json.loads(f.read_text()) for f in files]
     for ad in ads:
-        ad["derived"] = compute(ad["text"], ad.get("eu_metrics"))
+        ad["derived"] = compute(ad["text"], ad.get("eu_metrics"), ad.get("coverage_basis"))
         ad["schema_version"] = SCHEMA_VERSION
     assign_near_duplicates(ads)
     for f, ad in zip(files, ads):

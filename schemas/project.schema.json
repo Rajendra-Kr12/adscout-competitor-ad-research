@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fbcm.local/schemas/project.schema.json",
+  "title": "Research project (config/projects/<slug>.yaml), project schema v1",
+  "description": "The intake answers for one multi-brand research project, written by scripts/project.py (or the research-brands skill through it) and read by scripts/run_project.py. Holds brand names, public Page IDs and preferences only, never Platform Data. Each brand's `coverage` block is derived by project.py from its countries: EU/UK countries go to ads_archive (full detail), any other country to the Meta Ads MCP route (discovery only, not connected yet).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project", "created", "brands", "markets", "window", "goal", "layout", "output_root", "outputs"],
+  "properties": {
+    "schema_version": { "const": "project-v1" },
+    "project": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "title": { "type": "string" },
+    "created": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "intake_version": { "type": "string" },
+    "brands": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/brand" }
+    },
+    "markets": { "$ref": "#/$defs/countries", "description": "Default delivery markets (ad_reached_countries) for brands without their own `countries`." },
+    "window": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["months"],
+          "properties": { "months": { "type": "integer", "minimum": 1, "maximum": 84 } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["since", "until"],
+          "properties": {
+            "since": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" },
+            "until": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}$" }
+          }
+        }
+      ]
+    },
+    "goal": { "enum": ["messaging-creative", "offers-calendar", "head-to-head", "all"] },
+    "layout": {
+      "enum": ["project/date/brand", "brand/date", "flat"],
+      "description": "project/date/brand: reports/<p>/<date>/<brand>/. brand/date: reports/<p>/<brand>/<date>/ with run files in reports/<p>/runs/<date>/. flat: Phase 0 style reports/<brand>/<date>-competitor-report.md, run files in reports/<p>/."
+    },
+    "output_root": {
+      "type": "string",
+      "description": "'reports' (default, git-ignored) or an absolute path outside the repo."
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["markdown", "xlsx", "csv"],
+      "properties": {
+        "markdown": { "const": true },
+        "xlsx": { "type": "boolean" },
+        "csv": { "type": "boolean" },
+        "html": { "type": "boolean", "description": "Preference only: the local HTML dashboard is not built yet (P1-14)." },
+        "drive": { "type": "boolean", "description": "Preference only: the Google Drive copy is not built yet (P1-15)." }
+      }
+    },
+    "visuals": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Preference only until stage 3 (P1-09/P1-10). Nothing is downloaded in this stage.",
+      "properties": {
+        "route": { "enum": ["inbox", "none", "snapshot"] },
+        "window_days": { "type": "integer", "minimum": 1, "maximum": 365 },
+        "max_ads_per_brand": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "video": { "enum": ["keyframes", "transcript", "skip"] }
+      }
+    },
+    "monitor": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Preference only until stage 4 (P1-11/P1-12). Nothing is scheduled in this stage.",
+      "properties": {
+        "cadence": { "enum": ["daily+weekly-digest", "weekly", "daily-digest", "none"] },
+        "time": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" },
+        "watch": {
+          "type": "array", "uniqueItems": true,
+          "items": { "enum": ["new_ads", "stopped_ads", "offers", "copy_changes", "creative_changes", "platforms_markets", "reach_jumps"] }
+        },
+        "alerts": {
+          "type": "array", "uniqueItems": true,
+          "items": { "enum": ["digest", "macos", "gmail-draft"] }
+        }
+      }
+    },
+    "critic": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "last_verdict": { "enum": ["approve", "revise", "block"] },
+        "stage": { "enum": ["plan", "data", "report"] },
+        "at": { "type": "string" },
+        "prompt_version": { "type": "string" }
+      }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "countries": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z]{2}$" }
+    },
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "page_ids"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+        "name": { "type": "string", "minLength": 1 },
+        "page_ids": {
+          "type": "array", "maxItems": 10, "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[0-9]+$" },
+          "description": "Empty until resolved (config, discover_pages.py, or the user). ads_archive takes at most 10 per query."
+        },
+        "page_id_source": { "enum": ["config", "discovery", "user"] },
+        "search_terms": { "type": "string", "description": "Used only by discover_pages.py to find the Page." },
+        "countries": { "$ref": "#/$defs/countries", "description": "This brand's markets; overrides the project's `markets`." },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ads_archive", "mcp", "plan"],
+          "description": "Derived by project.py; do not edit by hand.",
+          "properties": {
+            "ads_archive": { "type": "array", "items": { "type": "string" }, "description": "EU/UK countries: full detail via ads_archive." },
+            "mcp": { "type": "array", "items": { "type": "string" }, "description": "Other countries: Meta Ads MCP discovery only (not connected in this stage)." },
+            "plan": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

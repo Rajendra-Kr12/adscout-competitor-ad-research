@@ -7,9 +7,20 @@ The things this project always does, never does, and why. The full analysis and 
 | Allowed | Not allowed |
 |---|---|
 | Meta Ad Library API `GET /ads_archive`, called with the captain's own user token | Scraping facebook.com or the Ad Library website (HTTP scrapers, Apify actors, "no token" Ad Library MCP servers) |
-| Meta-hosted Ads MCP server `https://mcp.facebook.com/ads` (Step-0 spike, then own-account work in Phase 3) | Driving facebook.com with a browser agent (Claude in Chrome, computer use, Playwright, chrome-devtools) |
+| Meta-hosted Ads MCP server `https://mcp.facebook.com/ads`, tool `ads_library_search` only (spike done; not connected yet), then own-account work in Phase 3 | Driving facebook.com with a browser agent (Claude in Chrome, computer use, Playwright, chrome-devtools) |
 | A human looking at the Ad Library website | Third-party "Meta Ads MCP" servers that hold our token |
 | Per-ad creative download **for analysis** (Phase 1, not built) | Bulk mirroring of a competitor's creatives |
+
+Meta Ads MCP rules, for when the route is connected (`scripts/mcp_source.py` is a stub until then):
+
+- Only `ads_library_search`. The login grants write scopes and the server exposes about 44 write tools,
+  so block write actions in Business Suite > Settings > Integrations > Ads MCP server and deny every other
+  `mcp__meta-ads__*` tool.
+- Its own description says "Do NOT use for bulk data extraction/scraping of the Ad Library": a few calls
+  per brand per day, by `page_ids`, through `scripts/guard.py`.
+- Its `advertiser_request` field sends the user's request to Meta verbatim, so it carries brand names and
+  countries only, never personal data.
+- Outputs label its records `headline-only` and never present them as full ad detail.
 
 Basis: Meta Terms §3.2 ("You may not access or collect data from our Products using automated means... without our prior permission"). The Ad Library API page allows downloading creative "for an individual ad... for analysis".
 
@@ -21,6 +32,9 @@ Basis: Meta Terms §3.2 ("You may not access or collect data from our Products u
 - The API returns `ad_snapshot_url` with the access token embedded. `fetch_ads.py` strips the `access_token` parameter **before** writing `data/raw/` and refuses to write any line that still contains it. Raw files are created 0600. The snapshot URL itself is kept **only** in `data/raw/`. It is never written to `data/ads/`, `data/llm/`, reports or chat output. `scripts/common.py:write_json` and `build_report.py` refuse to write any text containing `access_token`, and `tests/test_pipeline.py` asserts this.
 - Error messages are token-scrubbed before they are printed.
 - Reports cite ads only by the public permalink `https://www.facebook.com/ads/library/?id=<library_id>`.
+- Project files (`config/projects/*.yaml`) hold brand names, public Page IDs and preferences only, never ad
+  data, so they may be committed. A project's `output_root` must be `reports/` or an absolute path outside the
+  repo, because only `reports/` is git-ignored; the same privacy rules apply wherever it points.
 - `reports/<target>/<date>-ads.csv` carries each ad's full text, so it is Platform Data like the report: git-ignored, private, and written only through the same `access_token` check.
 
 ## Agent guardrails
