@@ -81,6 +81,11 @@ def meta_said(e: dict) -> str:
     return " - ".join(p for p in parts if p)  # MetaApiError scrubs tokens from the whole message
 
 
+def too_much_data(code, err) -> bool:
+    """Code 1 "Please reduce the amount of data you're asking for": deterministic, never transient."""
+    return code == 1 and "reduce the amount of data" in str(err).lower()
+
+
 class GraphTransport:
     """GET through the guard. Retries only transient failures (codes 1/2, HTTP 5xx, network).
 
@@ -131,6 +136,11 @@ class GraphTransport:
                                          message=str(err), soft_kinds=self.soft_kinds)
             fatal = code in THROTTLE_CODES or classify_error(code, subcode) is not None
             transient = code in TRANSIENT_CODES or status is None or status >= 500
+            if too_much_data(code, err):
+                # The same request can never succeed: raise at once so no calls are wasted and the
+                # circuit breaker moves by one failure, not four. Re-run with a smaller --limit.
+                raise MetaApiError(f"{err} (not retried: Meta wants a smaller page; lower --limit)",
+                                   code, subcode)
             if fatal or not transient or attempt >= min(self.retries, len(self.delays)):
                 raise err
             delay = self.delays[attempt]
@@ -417,7 +427,8 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
                     help="one query for the whole range instead of one per calendar month")
     ap.add_argument("--media-types", default="ALL",
                     help="comma list of ALL,IMAGE,MEME,VIDEO,NONE. Per-type queries fill media_type_hint")
-    ap.add_argument("--limit", type=int, default=500, help="page size (API max 5000)")
+    ap.add_argument("--limit", type=int, default=100,
+                    help="page size (API max 5000; Meta returns ~25-40 ads per page with the full field list)")
     ap.add_argument("--out-key", help="folder name under data/raw (default: competitor key or page id)")
     ap.add_argument("--data-dir", type=Path, default=DATA_DIR)
     ap.add_argument("--env-file", type=Path, default=ROOT / ".env",

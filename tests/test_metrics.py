@@ -1,3 +1,5 @@
+import pytest
+
 from text_metrics import assign_near_duplicates, compute, jaccard, landing_domain
 
 
@@ -21,6 +23,23 @@ def test_offer_and_style_signals():
     assert d["has_price"] and d["has_percent_off"]
     plain = compute(text(["A calm brand story with 5,000 years of heritage."]))
     assert not plain["has_price"] and not plain["has_percent_off"] and plain["emoji_count"] == 0
+
+
+@pytest.mark.parametrize("copy", [
+    "20% off every refill", "Get up to 40% off our essentials", "15% discount on your first order",
+    "Save 30% on this limited edition", "save up to 30% on your routine", "Flat 25% this weekend",
+])
+def test_percent_off_needs_a_discount_word(copy):
+    assert compute(text([copy]))["has_percent_off"], copy
+
+
+@pytest.mark.parametrize("copy", [
+    # 2026-10-01 live run: 205+ UpCircle ads were flagged as discounts for this efficacy claim
+    "Clinically proven to reduce wrinkle depth by up to 22%. Better for your skin.",
+    "smooth fine lines (up to 22% less wrinkle depth)", "up to 30% of its collagen", "100% natural",
+])
+def test_percentage_claims_are_not_discounts(copy):
+    assert not compute(text([copy]))["has_percent_off"], copy
 
 
 def test_price_formats():

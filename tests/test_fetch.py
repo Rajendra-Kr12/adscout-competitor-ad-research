@@ -109,6 +109,20 @@ def test_transient_retries_give_up_after_three():
     assert sleeps == [2, 8, 30] and t.session.calls == 4
 
 
+def test_code1_reduce_data_is_not_retried():
+    # Brands check 2026-10-01: the identical request was retried 3 times and moved the breaker to 4/5.
+    msg = "Please reduce the amount of data you're asking for, then retry your request"
+    t, sleeps = transport([err(1, status=500, msg=msg), FakeResp(200, {"data": []})])
+    with pytest.raises(fetch_ads.MetaApiError, match="lower --limit"):
+        t.get("https://x", {})
+    assert t.session.calls == 1 and sleeps == []
+
+
+def test_other_code1_errors_still_retry():
+    t, sleeps = transport([err(1, status=500, msg="An unknown error occurred"), FakeResp(200, {"data": [1]})])
+    assert t.get("https://x", {}) == {"data": [1]} and len(sleeps) == 1
+
+
 @pytest.mark.parametrize("code,subcode,needle", [
     (2332002, None, "facebook.com/ID"),
     (10, 2332002, "facebook.com/ID"),
@@ -168,6 +182,7 @@ def test_dry_run_sends_nothing_and_redacts(capsys):
                            "--dry-run"]) == 0
     out = capsys.readouterr().out.strip().splitlines()
     assert len(out) == 3
+    assert all("&limit=100&" in line for line in out)  # default page size (Meta caps full-field pages anyway)
     assert all("access_token=REDACTED" in line and "search_terms=Kapiva" in line for line in out)
 
 

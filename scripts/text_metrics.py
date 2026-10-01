@@ -26,8 +26,10 @@ PRICE_RE = re.compile(
     r"|(?:\b\d[\d,]*(?:\.\d+)?\s?(?:gbp|inr|usd|eur|rupees)\b)",
     re.IGNORECASE,
 )
+# A discount needs a discount word next to the percentage: "20% off", "15% discount", "save (up to) 30%",
+# "flat 20%". A bare "up to 22%" is usually an efficacy claim ("reduces wrinkle depth by up to 22%").
 PERCENT_OFF_RE = re.compile(
-    r"\d{1,3}\s?%\s*(?:off|discount)|(?:save|up\s?to|flat|extra)\s*\d{1,3}\s?%",
+    r"\d{1,3}\s?%\s*(?:off|discount)|(?:save|flat|extra)\s*(?:up\s?to\s*)?\d{1,3}\s?%",
     re.IGNORECASE,
 )
 DOMAIN_RE = re.compile(r"^(?:https?://)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)", re.IGNORECASE)

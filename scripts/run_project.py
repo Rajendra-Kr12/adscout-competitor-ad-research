@@ -261,7 +261,7 @@ def build_comparison(project: dict, manifest: dict, data_dir: Path) -> str:
     L += [f"Window {since} to {until}. Every number comes from `run.json` and `data/ads/`; brands on the Meta Ads "
           "MCP route (outside the EU/UK) have no fetched ads in this stage and are listed for coverage only.", "",
           "## Side by side", "",
-          "| Brand | Countries (ads_archive) | Ads | Active | Median days running | New ads with % off "
+          "| Brand | Countries (ads_archive) | Ads | Active | Median days running | Ads with % off "
           "| Median words per body | Creative-only | Top platforms | UK reach (sum) | LLM |",
           "|---|---|---|---|---|---|---|---|---|---|---|"]
     llm_rows = []
@@ -337,8 +337,10 @@ def write_outputs(project: dict, manifest: dict, paths: projects.RunPaths, data_
         comp = {"name": b["name"], "countries": entry["countries"]}
         if competitors.get(b["key"], {}).get("coverage_note"):
             caveats.append(f"Config note: {competitors[b['key']]['coverage_note']}")
+        runs = tuple(g["run_id"] for g in manifest["groups"] if b["key"] in g["brands"] and g.get("run_id"))
         text = build_report.build(ads, b["key"], since, until, comp, today, countries=entry["countries"],
-                                  queried=b["coverage"]["ads_archive"], caveats=tuple(caveats))
+                                  queried=b["coverage"]["ads_archive"], caveats=tuple(caveats),
+                                  page_ids=tuple(b.get("page_ids") or ()), fetch_runs=runs)
         build_report.write_report(paths.root / entry["report"], text)
         csv_text = build_report.ads_csv(ads, b["name"])
         assert_no_token(csv_text, entry["csv"])
@@ -399,7 +401,8 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
     ap.add_argument("--date", help="run date YYYY-MM-DD (default: today, UTC); also the window's end month")
     ap.add_argument("--single-window", action="store_true",
                     help="one query per group for the whole window instead of one per calendar month")
-    ap.add_argument("--limit", type=int, default=500, help="page size (API max 5000)")
+    ap.add_argument("--limit", type=int, default=100,
+                    help="page size (API max 5000; Meta returns ~25-40 ads per page with the full field list)")
     ap.add_argument("--dry-run", action="store_true", help="print the request plan and call count, send nothing")
     ap.add_argument("--fixture", type=Path, help="serve responses from a synthetic fixture (offline)")
     ap.add_argument("--no-fetch", action="store_true", help="rebuild outputs from data/ads only (no API calls)")

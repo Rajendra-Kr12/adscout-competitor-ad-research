@@ -296,9 +296,11 @@ TEXT_STATUS = {
 
 def build(ads_all: list[dict], target: str, since: str | None, until: str | None,
           competitor: dict | None, today: date, countries: list[str] | None = None,
-          queried: list[str] | None = None, caveats: tuple[str, ...] = ()) -> str:
+          queried: list[str] | None = None, caveats: tuple[str, ...] = (),
+          page_ids: tuple[str, ...] = (), fetch_runs: tuple[str, ...] = ()) -> str:
     """queried: countries actually sent to ads_archive when they differ from `countries` (project runs
-    route non-EU/UK countries elsewhere); caveats: extra coverage bullets."""
+    route non-EU/UK countries elsewhere); caveats: extra coverage bullets. page_ids / fetch_runs: the
+    Pages and runs that were queried, so a report with 0 ads still says what was asked for."""
     since, until = default_window(ads_all, since, until, today)
     months = months_between(parse_month(since), parse_month(until))
     ads = window_ads(ads_all, since, until)
@@ -308,7 +310,7 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
     name = (competitor or {}).get("name") or target
     pages = Counter(f"{a['page']['name']} ({a['page']['id']})" for a in ads)
     basis = Counter(a["coverage_basis"] for a in ads)
-    runs = sorted({a["provenance"]["run_id"] for a in ads})
+    runs = sorted({a["provenance"]["run_id"] for a in ads} | set(fetch_runs))
     api_versions = sorted({a["provenance"]["api_version"] or "?" for a in ads})
     with_llm = [a for a in ads if a.get("llm")]
     L: list[str] = []
@@ -324,7 +326,12 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
     w(f"- Window: {since} to {until} ({len(months)} month{'s' if len(months) != 1 else ''})")
     w(f"- Generated: {today.isoformat()} from {len(runs)} fetch run(s): {', '.join(runs) or 'none'}; "
       f"API {', '.join(api_versions) or 'n/a'}")
-    w(f"- Pages: {', '.join(pages) or 'none'}")
+    if pages:
+        w(f"- Pages: {', '.join(pages)}")
+    elif page_ids:
+        w(f"- Pages: {', '.join(page_ids)} (queried; no ads delivered in this window)")
+    else:
+        w("- Pages: none")
     w("")
 
     w("## Coverage basis and caveats")
@@ -368,6 +375,12 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
             w(f"**No ads were returned for this window.** Meta's Ad Library API only covers commercial ads "
               f"delivered to the EU/UK, and this query asked for {', '.join(countries)} only. An empty result "
               "here is the API's coverage limit, not an error, and it does not prove the advertiser ran no ads.")
+        elif page_ids and (queried or countries):
+            sent = queried or countries
+            w(f"**No ads were returned for this window.** Page {', '.join(page_ids)} was queried for "
+              f"{', '.join(sent)}, and Meta returned no ads delivered there between {since} and {until}. "
+              "If the Page is right, the advertiser was not running commercial ads there in this window; "
+              "ads shown only outside the EU/UK would not appear.")
         else:
             w("**No ads were returned for this window.** Given the coverage rule above this is expected "
               "for advertisers who do not deliver to the EU/UK; it does not prove the advertiser ran no ads.")

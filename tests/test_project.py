@@ -155,6 +155,34 @@ def test_fixture_run_writes_dated_per_brand_folders(tmp_path, capsys):
                 assert "access_token" not in f.read_text().lower(), f
 
 
+def test_zero_ad_brand_report_keeps_its_page_and_run(tmp_path):
+    # 2026-10-01 live run: Lucy Bee (0 ads in GB) got "Pages: none" and "0 fetch run(s)" although its
+    # Page was queried in the grouped run.
+    make(tmp_path, synth_specs(), window={"since": "2026-01", "until": "2026-09"})
+    assert run(tmp_path, "--fixture", str(SYNTHETIC)) == 0
+    run_dir = tmp_path / "reports" / "synth" / "2026-09-29"
+    (g,) = json.loads((run_dir / "run.json").read_text())["groups"]
+    md = (run_dir / "synthetic-in-page" / "report.md").read_text()
+    assert f"- Pages: {IN_PAGE} (queried; no ads delivered in this window)" in md
+    assert f"from 1 fetch run(s): {g['run_id']}" in md
+    assert f"Page {IN_PAGE} was queried for GB" in md and "Pages: none" not in md
+
+
+def test_comparison_percent_off_column_counts_ads_in_window(tmp_path):
+    make(tmp_path, synth_specs()[:1], window={"since": "2026-01", "until": "2026-09"})
+    assert run(tmp_path, "--fixture", str(SYNTHETIC)) == 0
+    comparison = (tmp_path / "reports" / "synth" / "2026-09-29" / "comparison.md").read_text()
+    assert "| Ads with % off |" in comparison and "New ads with % off" not in comparison
+
+
+def test_default_page_size_is_100(tmp_path, capsys):
+    # Meta caps a full-field page at ~25-40 ads anyway; a big limit only raises the code-1 risk.
+    make(tmp_path, synth_specs()[:1], window={"since": "2026-09", "until": "2026-09"})
+    assert run(tmp_path, "--dry-run") == 0
+    gets = [l for l in capsys.readouterr().out.splitlines() if l.startswith("GET ")]
+    assert gets and all("&limit=100&" in g for g in gets)
+
+
 def test_rebuild_keeps_analyst_notes(tmp_path):
     make(tmp_path, synth_specs()[:1])
     assert run(tmp_path, "--fixture", str(SYNTHETIC)) == 0
