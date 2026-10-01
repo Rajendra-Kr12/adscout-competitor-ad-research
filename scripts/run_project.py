@@ -292,6 +292,9 @@ def write_outputs(project: dict, manifest: dict, paths: projects.RunPaths, data_
         csv_text = build_report.ads_csv(ads, b["name"])
         assert_no_token(csv_text, entry["csv"])
         (paths.root / entry["csv"]).write_text(csv_text)
+    if project["outputs"].get("xlsx") or project["outputs"].get("csv"):
+        import export_xlsx  # openpyxl is only needed when the project asks for exports
+        export_xlsx.export_run(project, manifest, paths, data_dir)
     build_report.write_report(paths.index, build_index(project, manifest, paths),
                               blocks=((CRITIC_START, CRITIC_END),))
     projects.point_latest(paths, [b["key"] for b in project["brands"]])

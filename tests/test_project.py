@@ -151,7 +151,7 @@ def test_fixture_run_writes_dated_per_brand_folders(tmp_path, capsys):
     assert "Runs" in (reports / "project.md").read_text()
     for root in (tmp_path / "reports", data / "ads", data / "runs"):
         for f in root.rglob("*"):
-            if f.is_file():
+            if f.is_file() and f.suffix != ".xlsx":  # the workbook is checked cell by cell in test_export.py
                 assert "access_token" not in f.read_text().lower(), f
 
 

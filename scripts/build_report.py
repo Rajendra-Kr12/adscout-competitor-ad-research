@@ -208,9 +208,42 @@ def _joined(variants: list[dict], sep: str) -> str:
     return sep.join((f"[×{v['count']}] " if v["count"] > 1 else "") + v["text"] for v in variants)
 
 
-def _csv_safe(value) -> str:
+def csv_safe(value) -> str:
     s = "" if value is None else str(value)
     return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s  # no spreadsheet formulas
+
+
+def ad_row(a: dict, brand: str) -> dict:
+    """One ad as a flat row (CSV_COLUMNS keys): full text, LLM fields, reach, targeting."""
+    d, der, llm = a["dates"], a["derived"], a.get("llm") or {}
+    vu, offer, q = der["variants_unique"], (llm.get("offer") or {}), (llm.get("quality") or {})
+    uk = der.get("uk_reach") or {}
+    eu = a.get("eu_metrics") or {}
+    return {
+        "brand": brand, "page_name": a["page"]["name"], "page_id": a["page"]["id"],
+        "library_id": a["library_id"], "permalink": a["permalink"],
+        "status": "active" if d["active_at_fetch"] else ("unknown" if d["active_at_fetch"] is None else "stopped"),
+        "start": (d["delivery_start"] or "")[:10], "stop": (d["delivery_stop"] or "")[:10],
+        "days_running": d["days_running"], "platforms": ", ".join(a["platforms"]),
+        "languages": ", ".join(a["languages"]), "media_type": a["media_type_hint"],
+        "text_status": der["text_status"], "primary_text": _joined(vu["bodies"], "\n---\n"),
+        "headlines": _joined(vu["link_titles"], " | "),
+        "descriptions": _joined(vu["link_descriptions"], " | "),
+        "captions": _joined(vu["link_captions"], " | "), "landing_domain": der["landing_domain"],
+        "hook": llm.get("hook"), "proposition": llm.get("proposition"),
+        "offer_type": offer.get("type"), "offer_text": offer.get("text"),
+        "offer_deadline": offer.get("deadline"), "cta_copy": llm.get("cta"),
+        "tone": ", ".join(llm.get("tone") or []),
+        "audience_signals": ", ".join(llm.get("audience_signals") or []),
+        "clarity": q.get("clarity"), "specificity": q.get("specificity"),
+        "brand_consistency": q.get("brand_consistency"),
+        "uk_reach": uk.get("value"), "uk_reach_basis": uk.get("basis"), "eu_reach": eu_reach(a),
+        "reach_by_country": ", ".join(f"{c} {v}" for c, v in sorted(der["reach_by_country"].items())),
+        "target_ages": ages_text(a), "target_gender": eu.get("target_gender"),
+        "target_locations": locations_text(a),
+        "beneficiary_payers": payers_text(a), "near_duplicate_of": der["near_duplicate_of"],
+        "fetched_at": a["provenance"]["fetched_at"], "run_id": a["provenance"]["run_id"],
+    }
 
 
 def ads_csv(ads: list[dict], brand: str) -> str:
@@ -218,36 +251,8 @@ def ads_csv(ads: list[dict], brand: str) -> str:
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(CSV_COLUMNS)
     for a in ads:
-        d, der, llm = a["dates"], a["derived"], a.get("llm") or {}
-        vu, offer, q = der["variants_unique"], (llm.get("offer") or {}), (llm.get("quality") or {})
-        uk = der.get("uk_reach") or {}
-        eu = a.get("eu_metrics") or {}
-        row = {
-            "brand": brand, "page_name": a["page"]["name"], "page_id": a["page"]["id"],
-            "library_id": a["library_id"], "permalink": a["permalink"],
-            "status": "active" if d["active_at_fetch"] else "stopped",
-            "start": (d["delivery_start"] or "")[:10], "stop": (d["delivery_stop"] or "")[:10],
-            "days_running": d["days_running"], "platforms": ", ".join(a["platforms"]),
-            "languages": ", ".join(a["languages"]), "media_type": a["media_type_hint"],
-            "text_status": der["text_status"], "primary_text": _joined(vu["bodies"], "\n---\n"),
-            "headlines": _joined(vu["link_titles"], " | "),
-            "descriptions": _joined(vu["link_descriptions"], " | "),
-            "captions": _joined(vu["link_captions"], " | "), "landing_domain": der["landing_domain"],
-            "hook": llm.get("hook"), "proposition": llm.get("proposition"),
-            "offer_type": offer.get("type"), "offer_text": offer.get("text"),
-            "offer_deadline": offer.get("deadline"), "cta_copy": llm.get("cta"),
-            "tone": ", ".join(llm.get("tone") or []),
-            "audience_signals": ", ".join(llm.get("audience_signals") or []),
-            "clarity": q.get("clarity"), "specificity": q.get("specificity"),
-            "brand_consistency": q.get("brand_consistency"),
-            "uk_reach": uk.get("value"), "uk_reach_basis": uk.get("basis"), "eu_reach": eu_reach(a),
-            "reach_by_country": ", ".join(f"{c} {v}" for c, v in sorted(der["reach_by_country"].items())),
-            "target_ages": ages_text(a), "target_gender": eu.get("target_gender"),
-            "target_locations": locations_text(a),
-            "beneficiary_payers": payers_text(a), "near_duplicate_of": der["near_duplicate_of"],
-            "fetched_at": a["provenance"]["fetched_at"], "run_id": a["provenance"]["run_id"],
-        }
-        w.writerow([_csv_safe(row[c]) for c in CSV_COLUMNS])
+        row = ad_row(a, brand)
+        w.writerow([csv_safe(row[c]) for c in CSV_COLUMNS])
     return buf.getvalue()
 
 

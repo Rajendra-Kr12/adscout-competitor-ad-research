@@ -35,6 +35,9 @@ Basis: Meta Terms §3.2 ("You may not access or collect data from our Products u
 - Project files (`config/projects/*.yaml`) hold brand names, public Page IDs and preferences only, never ad
   data, so they may be committed. A project's `output_root` must be `reports/` or an absolute path outside the
   repo, because only `reports/` is git-ignored; the same privacy rules apply wherever it points.
+- A project run's `workbook.xlsx` and `csv/` carry full ad text too: they are Platform Data like the reports,
+  kept under the same rules, and never embed competitor images (`export_xlsx.py` also refuses any cell
+  containing `access_token`). Share them only privately; the Google Drive copy is not built yet.
 - `reports/<target>/<date>-ads.csv` carries each ad's full text, so it is Platform Data like the report: git-ignored, private, and written only through the same `access_token` check.
 
 ## Agent guardrails

@@ -194,6 +194,13 @@ $PY scripts/run_project.py ayurveda-uk --no-fetch            # rebuild outputs f
   - `flat`: Phase 0 names, `reports/<brand>/<date>-competitor-report.md`, run files in `reports/<p>/`
 - `index.md` has the cross-brand table, each brand's coverage plan, what was not fetched and why, and a
   critic block. Rebuilding keeps the report-writer notes and the critic block.
+- **Exports** (`outputs` in the project; C4 stays the user's choice, xlsx + CSV by default): `workbook.xlsx`
+  and `csv/` in the run folder, written by `scripts/export_xlsx.py` (re-run alone with
+  `$PY scripts/export_xlsx.py <slug> --date <YYYY-MM-DD>`). Sheets: About, Ads (one row per ad with the full
+  text of every variant, headline, description, caption, LLM fields, reach and targeting), Variants, Monthly,
+  Offers, Reach (age x gender), Changes (empty until monitoring) and Coverage (per brand: route, coverage plan,
+  why a brand has 0 ads, LLM coverage, critic findings). Links are public permalinks; no images are embedded;
+  text starting with `=` stays text. The HTML dashboard and the Google Drive copy are not built yet.
 
 ### What the report contains
 
@@ -240,7 +247,7 @@ config/guard.yaml            API guard caps and thresholds
 .claude/settings.json        permission deny rules + PreToolUse hook (.claude/hooks/guard_pretool.py)
 .githooks/pre-commit         token / Platform Data commit check
 scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
-                             project, discover_pages, run_project, mcp_source (stub),
+                             project, discover_pages, run_project, export_xlsx, mcp_source (stub),
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report template (versioned)
 .claude/agents/              ad-extractor, report-writer
