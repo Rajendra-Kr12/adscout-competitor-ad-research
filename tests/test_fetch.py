@@ -129,6 +129,15 @@ def test_non_retryable_error_fails_fast():
     assert sleeps == []
 
 
+def test_invalid_parameter_error_keeps_metas_detail():
+    resp = err(100, 2334030, msg="Invalid parameter")
+    resp._body["error"].update(error_user_title="Bad date", error_user_msg="see https://g/?access_token=SECRET9")
+    t, _ = transport([resp])
+    with pytest.raises(fetch_ads.MetaApiError) as exc:
+        t.get("https://x", {})
+    assert "Invalid parameter - Bad date - see" in str(exc.value) and "SECRET9" not in str(exc.value)
+
+
 def test_error_messages_are_token_scrubbed():
     t, _ = transport([err(100, msg="bad url https://g/?access_token=SECRET123&x=1")])
     with pytest.raises(fetch_ads.MetaApiError) as exc:

@@ -46,6 +46,7 @@ from common import (
     EU_UK,
     REPORTS_DIR,
     ROOT,
+    api_last_day,
     assert_no_token,
     country_code,
     load_competitors,
@@ -252,6 +253,11 @@ def new_project(project: str, brand_specs: list[str], *, today: date, competitor
 
 # --- window, output root and run paths --------------------------------------------
 
+def last_day(run_date: date) -> date:
+    """Last delivery date to ask ads_archive for: the run date, but never past Meta's own today."""
+    return min(run_date, api_last_day())
+
+
 def resolve_window(project: dict, today: date) -> tuple[str, str]:
     """(since, until) as YYYY-MM. {months: N} ends with the current month."""
     w = project["window"]
@@ -418,7 +424,7 @@ def mcp_plan(project: dict) -> list[dict]:
 
 def estimate_calls(project: dict, today: date, *, single_window: bool = False) -> dict:
     since, until = resolve_window(project, today)
-    windows = 1 if single_window else len(month_windows(since, until))
+    windows = 1 if single_window else len(month_windows(since, until, last_day=last_day(today)))
     groups = archive_groups(project)
     return {"since": since, "until": until, "windows": windows, "groups": len(groups),
             "archive_queries": windows * len(groups), "discovery_calls": len(unresolved(project)),

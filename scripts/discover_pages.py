@@ -34,8 +34,10 @@ LIMIT = 500
 
 
 def discovery_params(name: str, countries: list[str], today: date, token: str | None) -> dict:
+    """Ads delivered in the year up to `today`, clamped to Meta's own day (projects.last_day)."""
+    end = projects.last_day(today)
     params = build_params(page_ids=None, search_terms=name, countries=countries,
-                          date_min=(today - timedelta(days=365)).isoformat(), date_max=today.isoformat(),
+                          date_min=(end - timedelta(days=365)).isoformat(), date_max=end.isoformat(),
                           media_type="ALL", limit=LIMIT, token=token, search_type="KEYWORD_EXACT_PHRASE")
     params["fields"] = FIELDS
     return params

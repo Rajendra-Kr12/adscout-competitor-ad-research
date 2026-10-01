@@ -30,6 +30,7 @@ import requests
 from common import (
     DATA_DIR,
     DEFAULT_API_VERSION,
+    api_last_day,
     ROOT,
     EU_UK,
     assert_no_token,
@@ -69,6 +70,15 @@ class MetaApiError(RuntimeError):
     def __init__(self, message: str, code: int | None = None, subcode: int | None = None):
         super().__init__(scrub_tokens(message))
         self.code, self.subcode = code, subcode
+
+
+def meta_said(e: dict) -> str:
+    """Graph's message plus its user-facing title/detail, which name the bad parameter for code 100."""
+    parts = [str(e.get("message") or "")]
+    for k in ("error_user_title", "error_user_msg"):
+        if e.get(k) and str(e[k]) not in parts:
+            parts.append(str(e[k]))
+    return " - ".join(p for p in parts if p)  # MetaApiError scrubs tokens from the whole message
 
 
 class GraphTransport:
@@ -111,11 +121,11 @@ class GraphTransport:
                 e = body.get("error") or {}
                 code, subcode = e.get("code"), e.get("error_subcode")
                 hint = next((ACCESS_ERRORS[c] for c in (subcode, code) if c in ACCESS_ERRORS), None)
+                said = meta_said(e)
                 if hint:
-                    err = MetaApiError(f"[{subcode or code}] {hint} (Meta said: {e.get('message')})", code, subcode)
+                    err = MetaApiError(f"[{subcode or code}] {hint} (Meta said: {said})", code, subcode)
                 else:
-                    err = MetaApiError(f"HTTP {status} code={code} subcode={subcode}: {e.get('message')}",
-                                       code, subcode)
+                    err = MetaApiError(f"HTTP {status} code={code} subcode={subcode}: {said}", code, subcode)
             if self.guard:
                 self.guard.after_failure(code=code, subcode=subcode, status=status, headers=headers,
                                          message=str(err), soft_kinds=self.soft_kinds)
@@ -422,7 +432,7 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
     media_types = [m.strip().upper() for m in args.media_types.split(",") if m.strip()]
     if bad := [m for m in media_types if m not in MEDIA_TYPES]:
         sys.exit(f"unknown media type(s): {bad}")
-    windows = month_windows(args.since, args.until)
+    windows = month_windows(args.since, args.until, last_day=api_last_day())
     if args.single_window:
         windows = [(windows[0][0], windows[-1][1])]
     base_url = f"https://graph.facebook.com/{api_version}/ads_archive"

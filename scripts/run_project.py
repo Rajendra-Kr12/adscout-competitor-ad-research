@@ -87,7 +87,9 @@ def brand_ads(data_dir: Path, key: str, since: str, until: str) -> list[dict]:
 
 def windows_for(project: dict, today: date, single_window: bool) -> tuple[str, str, list[tuple[str, str]]]:
     since, until = projects.resolve_window(project, today)
-    windows = month_windows(since, until)
+    windows = month_windows(since, until, last_day=projects.last_day(today))
+    if not windows:
+        raise projects.ProjectError(f"the window {since}..{until} starts after Meta's current day")
     if single_window:
         windows = [(windows[0][0], windows[-1][1])]
     return since, until, windows
@@ -162,6 +164,12 @@ def brand_status(b: dict, fetched: dict[str, dict], no_fetch: bool) -> str:
     return "ok" if g["status"] == "ok" else "fetch stopped"
 
 
+def display_path(path: Path) -> str:
+    """Repo-relative when inside the repo, else absolute."""
+    p = Path(path).resolve()
+    return str(p.relative_to(ROOT.resolve())) if ROOT.resolve() in p.parents else str(p)
+
+
 def rel(path: Path, start: Path) -> str:
     return os.path.relpath(path, start)
 
@@ -182,11 +190,12 @@ def build_index(project: dict, manifest: dict, paths: projects.RunPaths) -> str:
         L += ["> **SYNTHETIC DATA.** Built from test fixtures, not from Meta. Nothing below describes a real "
               "advertiser.", ""]
     calls = sum(g["calls"] for g in manifest["groups"])
-    L += [f"- Project: `{project['project']}` (config/projects/{project['project']}.yaml); goal "
+    L += [f"- Project: `{project['project']}` ({manifest['project_file']}); goal "
           f"{project['goal']}; layout {project['layout']}",
           f"- Window: {manifest['window']['since']} to {manifest['window']['until']} "
-          f"({manifest['window']['months']} months)",
-          f"- Fetch: {manifest['mode']}, {calls} ads_archive call(s) in {len(manifest['groups'])} query group(s); "
+          f"({manifest['window']['months']} month{'s' if manifest['window']['months'] != 1 else ''})",
+          f"- Fetch: {manifest['mode']}, {calls} ads_archive call(s) in {len(manifest['groups'])} query group(s)"
+          f"{' (outputs rebuilt since, without new calls)' if manifest.get('rebuilt_without_fetch') else ''}; "
           f"run status **{manifest['status']}**",
           f"- Generated: {manifest['generated_at']} by `scripts/run_project.py`", ""]
     L += ["## Brands", "",
@@ -283,7 +292,7 @@ def build_comparison(project: dict, manifest: dict, data_dir: Path) -> str:
     return "\n".join(L)
 
 
-def build_project_md(project: dict, paths: projects.RunPaths) -> str:
+def build_project_md(project: dict, paths: projects.RunPaths, project_file: str) -> str:
     runs = []
     for m in sorted(paths.project_dir.rglob("*run.json")):
         try:
@@ -293,7 +302,7 @@ def build_project_md(project: dict, paths: projects.RunPaths) -> str:
         if doc.get("project") == project["project"]:
             runs.append((doc["run_date"], doc["status"], rel(m.parent, paths.project_dir), doc.get("index")))
     L = [f"# Project: {project.get('title') or project['project']}", "",
-         f"Saved intake: `config/projects/{project['project']}.yaml` (created {project['created']}, "
+         f"Saved intake: `{project_file}` (created {project['created']}, "
          f"{project.get('intake_version', '?')}). Re-run with `python scripts/run_project.py {project['project']}`.", "",
          "## Scope", "",
          f"- Brands: {', '.join(b['name'] for b in project['brands'])}",
@@ -342,11 +351,12 @@ def write_outputs(project: dict, manifest: dict, paths: projects.RunPaths, data_
     build_report.write_report(paths.index, build_index(project, manifest, paths), blocks=())
     projects.point_latest(paths, [b["key"] for b in project["brands"]])
     write_json(paths.manifest, manifest)
-    build_report.write_report(paths.project_md, build_project_md(project, paths))
+    build_report.write_report(paths.project_md, build_project_md(project, paths, manifest["project_file"]))
 
 
 def make_manifest(project: dict, paths: projects.RunPaths, groups_run: list[dict], *, mode: str, since: str,
-                  until: str, today: date, data_dir: Path, no_fetch: bool, single_window: bool) -> dict:
+                  until: str, today: date, data_dir: Path, no_fetch: bool, single_window: bool,
+                  project_file: str) -> dict:
     fetched = {k: g for g in groups_run for k in g["brands"]}
     brands = []
     for b in project["brands"]:
@@ -362,8 +372,8 @@ def make_manifest(project: dict, paths: projects.RunPaths, groups_run: list[dict
         })
     statuses = {g["status"] for g in groups_run}
     return {
-        "project": project["project"], "run_date": paths.date, "generated_at": iso_z(utc_now()),
-        "mode": "no-fetch" if no_fetch else mode,
+        "project": project["project"], "project_file": project_file, "run_date": paths.date, "generated_at": iso_z(utc_now()),
+        "mode": mode, "rebuilt_without_fetch": no_fetch,
         "window": {"since": since, "until": until, "months": len(month_windows(since, until)),
                    "single_window": single_window},
         "layout": project["layout"], "output_root": str(paths.root),
@@ -399,11 +409,11 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
         project = projects.load_project(args.project, args.projects_dir)
         paths = projects.run_paths(project, today.isoformat(), args.reports_dir)
         groups = projects.archive_groups(project)
+        since, until, windows = windows_for(project, today, args.single_window)
     except projects.ProjectError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     api_version = load_env(args.env_file).get("META_API_VERSION") or DEFAULT_API_VERSION
-    since, until, windows = windows_for(project, today, args.single_window)
     url = f"https://graph.facebook.com/{api_version}/ads_archive"
 
     if args.dry_run:
@@ -429,7 +439,8 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
         groups_run, mode = prev.get("groups", []), prev.get("mode", mode)
 
     manifest = make_manifest(project, paths, groups_run, mode=mode, since=since, until=until, today=today,
-                             data_dir=args.data_dir, no_fetch=args.no_fetch, single_window=args.single_window)
+                             data_dir=args.data_dir, no_fetch=args.no_fetch, single_window=args.single_window,
+                             project_file=display_path(projects.project_path(args.project, args.projects_dir)))
     write_outputs(project, manifest, paths, args.data_dir, since, until, today)
     calls = sum(g["calls"] for g in groups_run)
     print(f"{project['project']} {paths.date}: {len(manifest['brands'])} brand(s), {calls} call(s), "

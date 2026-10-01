@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -116,8 +116,18 @@ def months_between(start: date, end: date) -> list[str]:
     return out
 
 
-def month_windows(since: str, until: str) -> list[tuple[str, str]]:
-    """Calendar-month (min, max) YYYY-MM-DD windows covering since..until (YYYY-MM, inclusive)."""
+def api_last_day(now: datetime | None = None) -> date:
+    """The latest delivery date ads_archive accepts. Meta checks dates against its own "today", which
+    runs up to 8 hours behind UTC (Pacific time): early in the UTC day, today's UTC date is refused
+    ("must [be] in [2018-05-07 - Today]", code 100, observed 2026-10-01). UTC minus 12 hours is always safe."""
+    return ((now or utc_now()) - timedelta(hours=12)).date()
+
+
+def month_windows(since: str, until: str, last_day: date | None = None) -> list[tuple[str, str]]:
+    """Calendar-month (min, max) YYYY-MM-DD windows covering since..until (YYYY-MM, inclusive).
+
+    last_day clamps the final window's max and drops windows that start after it (see api_last_day).
+    """
     start, end = parse_month(since), parse_month(until)
     if end < start:
         raise ValueError(f"--until {until} is before --since {since}")
@@ -125,10 +135,12 @@ def month_windows(since: str, until: str) -> list[tuple[str, str]]:
     cur = start
     while cur <= end:
         nxt = next_month(cur)
-        last_day = date.fromordinal(nxt.toordinal() - 1)
-        windows.append((cur.isoformat(), last_day.isoformat()))
+        end_day = date.fromordinal(nxt.toordinal() - 1)
+        windows.append((cur, end_day))
         cur = nxt
-    return windows
+    if last_day is not None:
+        windows = [(a, min(b, last_day)) for a, b in windows if a <= last_day]
+    return [(a.isoformat(), b.isoformat()) for a, b in windows]
 
 
 def utc_now() -> datetime:

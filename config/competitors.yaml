@@ -35,8 +35,8 @@ competitors:
   - key: pukka-herbs
     name: Pukka Herbs
     page_url: https://www.facebook.com/Pukkaherbs
-    page_id: null
-    page_id_verified: false
+    page_id: "122206907808683"    # discover_pages.py 2026-10-01: "Pukka Herbs", 147+ GB ads in a year
+    page_id_verified: false       # captain to confirm (next candidate: "Pukka Herbs - Australia & New Zealand")
     search_terms: Pukka Herbs
     countries: [GB]
     role: test-uk-fallback

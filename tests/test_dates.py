@@ -55,3 +55,15 @@ def test_build_dates_stop_in_future_counts_to_fetch():
 def test_build_dates_missing_start():
     d = build_dates({}, "2026-09-29T12:00:00Z")
     assert d["start_month"] is None and d["active_months"] == [] and d["days_running"] is None
+
+
+def test_windows_never_pass_metas_today():
+    # 2026-10-01 03:49 UTC is still 2026-09-30 in Meta's (Pacific) day; Oct 1 was refused live (code 100).
+    from datetime import date, datetime, timezone
+
+    from common import api_last_day, month_windows
+    assert api_last_day(datetime(2026, 10, 1, 3, 49, tzinfo=timezone.utc)) == date(2026, 9, 30)
+    assert api_last_day(datetime(2026, 10, 1, 23, 0, tzinfo=timezone.utc)) == date(2026, 10, 1)
+    wins = month_windows("2026-08", "2026-10", last_day=date(2026, 9, 30))
+    assert wins == [("2026-08-01", "2026-08-31"), ("2026-09-01", "2026-09-30")]
+    assert month_windows("2026-09", "2026-09", last_day=date(2026, 9, 12)) == [("2026-09-01", "2026-09-12")]

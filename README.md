@@ -100,7 +100,7 @@ reusing one long-lived token across clients can trigger its spam systems.
 | 4, 17, 32, 341, 613, 80000-80014 | Rate limited | **Never retried.** The run stops, the guard sets a cooldown of at least 60 minutes, and later runs are refused until it ends |
 | 613 / subcode 1996 | Inconsistent request volume | Kill switch trips (see "API guard") |
 | 368, 459, 464 | Policy block, account checkpoint, unconfirmed user | Kill switch trips. A human resolves it on facebook.com; the agent never does |
-| 100 | Invalid parameter | Check the page ID, country codes and date format |
+| 100 | Invalid parameter | Check the page ID, country codes and date format. Dates after Meta's own "today" (Pacific time) are refused; scripts clamp to UTC minus 12 hours |
 | 0 ads for an IN/US brand | Coverage, not an error | Only EU/UK-delivered commercial ads are in the API |
 
 ## API guard

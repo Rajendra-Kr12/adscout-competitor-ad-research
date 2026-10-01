@@ -321,7 +321,7 @@ def build(ads_all: list[dict], target: str, since: str | None, until: str | None
           f"{', '.join(queried) or 'none'}")
     else:
         w(f"- Target: `{target}`" + (f" - countries queried: {', '.join(countries)}" if countries else ""))
-    w(f"- Window: {since} to {until} ({len(months)} months)")
+    w(f"- Window: {since} to {until} ({len(months)} month{'s' if len(months) != 1 else ''})")
     w(f"- Generated: {today.isoformat()} from {len(runs)} fetch run(s): {', '.join(runs) or 'none'}; "
       f"API {', '.join(api_versions) or 'n/a'}")
     w(f"- Pages: {', '.join(pages) or 'none'}")

@@ -165,7 +165,8 @@ def test_rebuild_keeps_analyst_notes(tmp_path):
     assert run(tmp_path, "--no-fetch") == 0
     assert "Seeded notes." in rep.read_text()
     manifest = json.loads((run_dir / "run.json").read_text())
-    assert manifest["mode"] == "no-fetch" and manifest["groups"][0]["calls"] == calls_before
+    assert manifest["mode"] == "fixture" and manifest["rebuilt_without_fetch"]
+    assert manifest["groups"][0]["calls"] == calls_before
     assert len(list((tmp_path / "data" / "runs").glob("*.json"))) == 1  # no new fetch
 
 
