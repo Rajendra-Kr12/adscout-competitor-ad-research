@@ -2,6 +2,16 @@
 
 Newest first. Each entry records the decision, why it was made, and the status.
 
+## 2026-10-01 - Keyword discovery skill (`meta-keyword-discovery`, captain: package the round 1 workflow)
+
+| # | Decision | Why | Status |
+|---|---|---|---|
+| 65 | **Keyword discovery is an optional skill after a project, and it stops for the user's pick** (`.claude/skills/meta-keyword-discovery`; `scripts/keyword_terms.py`, `discover_keywords.py`, `discovery_pages.py`; settings in `config/discovery.yaml`) | Captain: search the known brands' leading keywords to find new brands, iterate, then deep-dive 3-4 non-duplicates. Round 1 (20 calls, 2026-10-01) proved the workflow | Built + tested |
+| 66 | Search terms are ranked by **distinct copy clusters**, not ad count, from each ad's first line and headline; the agent picks the final terms | UpCircle's 661 repeat ads would otherwise swamp the ranking; picking specific, non-overlapping terms needs judgement | Built + tested |
+| 67 | Discovery search uses **lean fields** (no ad text, no ad_snapshot_url), a **hard budget** checked before any call, **no retries**, a **stop at the first usage warning** (`DiscoveryGuard.check_usage`; caps unchanged, call spacing still sleeps), and **monthly or weekly windows** with a page cap per window. Records go to `data/discovery/` (0600, 180-day retention) | Lean pages hold ~300 ads. In round 1, one window over the quarter returned newest-first caps that covered only 28-30 Sep for 4 of 5 keywords. The round 1 probe turned every guard sleep into a stop and only got away with it because each page took longer than the spacing interval | Built + tested |
+| 68 | **Advertisers are classified, not blanket-dropped**: brand owner and brand-led channel are kept; multi-brand retail, advertorial or affiliate funnel, clinic or B2B, off-category, reseller funnel and unverified are dropped with a logged reason. Every dropped Page appears in a "Dropped and why" table, and a channel-versus-brand table shows the same brand on its own Page vs other Pages. Thresholds and patterns are in config | Captain: big retailers and aggregators can carry brand-dictated messaging (Himalaya example); fake blogs and random resellers can go. v2 re-classification of round 1 brought back COSRX Global (20 live ads via Amazon UK), Medicube and other brands selling via Amazon, plus Himalaya via a creator Page | Built + tested |
+| 69 | `fetch_ads.build_params(fields=...)` and `common.week_windows` are shared helpers, not discovery-only copies | One request builder and one date-window module | Built + tested |
+
 ## 2026-10-01 - First live project run (`uk-natural-skincare-2026`, captain "yes")
 
 | # | Decision | Why | Status |

@@ -227,6 +227,39 @@ table, targeting and beneficiary/payer. `reports/<target>/<date>-ads.csv` has on
 same fields plus the LLM columns (cells starting with `= + - @` are prefixed with `'` so spreadsheets
 never run them as formulas).
 
+### Keyword discovery (optional deep-dive step)
+
+In Claude Code: `/meta-keyword-discovery <project-slug>` (`.claude/skills/meta-keyword-discovery/SKILL.md`). It finds
+competitors you are not tracking yet, from the words your tracked brands lead their ads with, then **stops for your
+pick** before any deep dive. The same steps by hand:
+
+```bash
+$PY scripts/keyword_terms.py --project ayurveda-uk --language en            # no calls: terms by distinct copy cluster
+$PY scripts/discover_keywords.py --name ayurveda-uk --keyword "dark circles" --keyword "menopause skin:unordered" \
+    --country GB --since 2026-07 --until 2026-09 --window month --dry-run   # the plan and its call ceiling
+$PY scripts/discover_keywords.py ...same arguments without --dry-run...     # through the guard
+$PY scripts/discovery_pages.py --name ayurveda-uk --project ayurveda-uk --out pages.json --tables-md tables.md
+```
+
+- **Terms:** 1-3 word phrases from each ad's first line and headline. Each copy cluster counts once, so one brand's
+  repeats cannot swamp the list. You choose the 5 search terms; the script only ranks them.
+- **Search:** lean fields (Page, dates, headline, link caption; no ad text, no snapshot link), about 300 ads per page,
+  and a hard `--budget` (default 25 calls; the plan is refused if it could exceed it). Nothing is retried, and the run
+  stops at the first error, guard stop or usage warning. The API returns the newest ads first, so each keyword is
+  split into **monthly or weekly windows** with a page cap per window. One window over a quarter samples only its
+  last days. Records go to `data/discovery/<name>/` (0600, 180-day retention).
+- **Classification:** every advertiser Page gets one class by explicit, overridable criteria in
+  `config/discovery.yaml`:
+  - **Kept:** brand owner, or a brand-led *channel* (a retailer, distributor or creator whose ads mostly name one
+    established brand).
+  - **Dropped:** multi-brand retail, advertorial or persona funnel, clinic or B2B, off-category, reseller funnel,
+    unverified.
+  - Dropped Pages are listed with their reason and ad count, so a person can overrule them. A channel-versus-brand
+    table shows the same brand on its own Page versus other Pages.
+- **Hand-off:** the chosen Page IDs go into a project (`project.py new ... --brand "Name:GB@<page_id>"`), and
+  `/research-brands` runs the usual gated pipeline on them.
+- Keyword results are a sample, not the market. Never read them as share, spend or reach.
+
 ### Offline demo (no token needed)
 
 ```bash
@@ -261,15 +294,18 @@ schemas/project.schema.json  project file schema (project-v1)
 schemas/critique.schema.json research-critic output (critic-v1)
 schemas/ad.schema.json       per-ad schema v0.2 (research §7.3; additive over v0.1)
 config/guard.yaml            API guard caps and thresholds
+config/discovery.yaml        keyword discovery: stopwords, lean fields, budget, advertiser classification criteria
 .claude/settings.json        permission deny rules + PreToolUse hook (.claude/hooks/guard_pretool.py)
 .githooks/pre-commit         token / Platform Data commit check
 scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
                              project, discover_pages, run_project, export_xlsx, critique, mcp_source (stub),
+                             keyword_terms, discover_keywords, discovery_pages (keyword discovery),
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report and comparison templates, intake, critic (versioned)
 .claude/agents/              ad-extractor, report-writer, research-critic
-.claude/skills/              analyze-competitor (one brand), research-brands (master, several brands)
-data/raw|ads|llm|media/      local only, git-ignored (retention: AGENTS.md); raw files are 0600, token stripped
+.claude/skills/              analyze-competitor (one brand), research-brands (master, several brands),
+                             meta-keyword-discovery (optional: find new competitors by keyword)
+data/raw|ads|llm|discovery|media/ local only, git-ignored (retention: AGENTS.md); raw files are 0600, token stripped
 data/state/guard/, data/runs/ guard state and run ledgers (git-ignored; data/* is ignored as a whole)
 reports/<target>/            <date>-competitor-report.md and <date>-ads.csv (git-ignored)
 reports/<project>/           project.md, latest, dated run folders (layout per project; git-ignored)
@@ -279,5 +315,6 @@ tests/                       pytest + synthetic fixtures
 
 ## Retention
 
-`$PY scripts/purge_expired.py` lists files past retention (raw and LLM batches 180 days, media 90 days);
+`$PY scripts/purge_expired.py` lists files past retention (raw, LLM batches and discovery records 180 days,
+media 90 days);
 add `--apply` to delete them.
