@@ -2,6 +2,17 @@
 
 Newest first. Each entry records the decision, why it was made, and the status.
 
+## 2026-10-01 - First live project run (`uk-natural-skincare-2026`, captain "yes")
+
+| # | Decision | Why | Status |
+|---|---|---|---|
+| 59 | Run window Jul-Sep 2026 in one guarded run (34 ads_archive calls, 1,382 ads, 9 Pages); LLM fields on a sample of up to 30 ads per brand (up to 10 newest per month, duplicate copy skipped) | A 12-month run was estimated at 150-300 calls at ~24 ads/page (#57), over the 150/hour cap; firstmate chose 3 months. The run got ~40 ads/page at `limit=100`, so 12 months is likely ~130-150 calls | Done |
+| 60 | Meta code 1 "reduce the amount of data" is no longer retried | The identical request can never succeed; the brands check lost 3 calls and moved the breaker to 4/5 | Fixed + tested |
+| 61 | Default `--limit` is 100 (`fetch_ads.py`, `run_project.py`) | Meta caps full-field pages at ~25-40 ads anyway, so a larger limit only raises the code-1 risk | Fixed + tested |
+| 62 | `has_percent_off` needs a discount word next to the % ("off", "discount", "save", "flat", "extra"); a bare "up to N%" no longer counts | "reduce wrinkle depth by up to 22%" flagged 205+ UpCircle ads as discounts | Fixed + tested |
+| 63 | The comparison column is "Ads with % off" (all ads in the window); a 0-ad brand report keeps its queried Page IDs and fetch run | The old "New ads with % off" label misled the report-writer; Lucy Bee's report said "Pages: none" although its Page was queried | Fixed + tested |
+| 64 | Not yet built: page-based call estimates in `project.py plan`, a sampling option in `llm_batches.py plan`, a narrower spend heuristic (#53 flagged "gift with spend over £70" and "Nothing here measures spend") | Captain scoped this ship to the fixes above | Open |
+
 ## 2026-10-01 - Phase 1 M2 "multi-brand master" (captain: "merge and go for next")
 
 C1 (intake questions), C3 (folder layout) and C4 (outputs) are still open captain calls. They are built as
