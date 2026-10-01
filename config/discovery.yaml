@@ -1,0 +1,72 @@
+# Keyword discovery (scripts/keyword_terms.py, discover_keywords.py, discovery_pages.py; skill
+# .claude/skills/meta-keyword-discovery). Edit these lists, not the code. Patterns are case-insensitive regexes.
+
+terms:
+  # Words that never make a useful search term on their own (generic, salesy or brand-neutral filler).
+  # A multi-word term may contain them in the middle but not start or end with one.
+  stopwords: >-
+    a an the and or but if of to in on for with at by from as is are was were be been being it its this that these
+    those you your yours we our ours us i me my mine they them their he she his her who what when where why how all
+    any each every some no not so than too very can will just do does did done have has had get got make made more
+    most less much many one two three now new up out over off into about after before again also only own same such
+    here there then once while because until via per skin skincare natural organic beauty product products range best
+    love loved favourite favorite shop discover today try free day days time way see look feel need want like know let
+    lets here's it's that's you're don't can't i'm i've uk x
+
+search:
+  # Lean ads_archive fields: enough to group by advertiser, no ad text and no ad_snapshot_url.
+  fields: [id, page_id, page_name, ad_delivery_start_time, ad_delivery_stop_time, ad_creative_link_titles,
+           ad_creative_link_captions, publisher_platforms]
+  limit: 300            # ads per page with lean fields (live run 2026-10-01: 300 per page, no code 1)
+  budget: 25            # default hard cap on ads_archive calls per discovery run (the daily token check is extra)
+  pages_per_window: 1   # 1 page per keyword x window keeps the sample spread across the whole range
+
+pages:
+  # Every advertiser Page gets exactly one class (scripts/discovery_pages.py, first rule that applies):
+  #   known        - a Page already tracked (project brands, competitors.yaml): listed, not a candidate
+  #   drop:clinic  - clinic, injectables or B2B supplier (name, domain or headline): a different audience
+  #   drop:off-category - outside skincare, or a non-UK/EU market site or Page
+  #   brand        - brand owner: the Page name contains a known brand (wherever it links, Amazon included)
+  #   drop:advertorial - persona, "expert", fake-blog, review or interview funnel (the brand it pushes is logged)
+  #   brand        - another Page of the same brand it carries (e.g. "<Brand> Online")
+  #   channel      - retailer, marketplace, distributor, reseller or creator whose ads mostly name ONE other
+  #                  ESTABLISHED brand (known_brands, project or competitors.yaml; brand share >=
+  #                  thresholds.brand_share_min), or a named retailer doing so: kept, tagged with the brand
+  #   drop:advertorial - a third-party Page pushing a brand seen only in this sample (affiliate funnel)
+  #   brand        - brand owner: most of its ads name its own brand (own-brand share >= brand_share_min),
+  #                  or the landing domain matches the Page name
+  #   drop:multi-brand-retail - a Page named as a retailer or marketplace with no single brand in its ads
+  #   brand        - links only to a marketplace and names no other brand: a brand selling there (unverified)
+  #   drop:reseller-funnel - landing domain unlike the Page name, no single brand, mostly promo wording
+  #   drop:unverified - landing domain unlike the Page name and no single brand or promo signal
+  # Dropped Pages are never deleted: they stay in the output with their reason and ad count so a human
+  # can overrule. Every list and threshold below can be edited (or overridden with --config).
+  thresholds:
+    brand_share_min: 0.5   # share of a Page's ads (with any headline or caption) that name the same brand
+    promo_share_min: 0.5   # share of those ads that use generic promo wording
+    lexicon_min_chars: 6   # brand names learned from brand-owner Pages must be at least this long
+  # Generic words that are never learned as brand names from Page names.
+  lexicon_stopwords: [reviews, review, deals, deal, health, wellness, glow, skin, natural, organic, care, online, prime,
+                      daily, studio, lab, labs, store, shop, official, beauty, boutique, essentials, store]
+  # Seed brand lexicon (extended at run time with the project's brands, competitors.yaml and brand-owner Pages).
+  known_brands: [himalaya, cosrx, medicube, cerave, the ordinary, la roche-posay, neutrogena, garnier, nivea, weleda,
+                 elemis, liz earle, no7, olay, bioderma, eucerin, aveeno, burt's bees, neal's yard, clinique,
+                 paula's choice, the inkey list, byoma, anua, beauty of joseon, skinceuticals, dr.melaxin, haruharu,
+                 green people, faith in nature, moogoo, pai skincare, trilogy, antipodes, tropic, bulldog, kiehl's,
+                 origins, avene, caudalie, decleor, dermalogica, murad, drunk elephant, glow recipe, laneige,
+                 sulwhasoo, innisfree, some by mi, skin1004, round lab, torriden, isntree, purito, klairs,
+                 the ayurveda experience, forest essentials, kama ayurveda, biotique, pukka, welleco]
+  marketplace_patterns: [amazon, boots, superdrug, hollandandbarrett, 'holland & barrett', lookfantastic, spacenk,
+                         cultbeauty, 'cult beauty', sephora, marksandspencer, tesco, sainsburys, johnlewis, feelunique,
+                         harrods, selfridges, asos, qvc, tkmaxx, notino, beautybay, temu, ebay, tiktok, aliexpress,
+                         shein, argos, primark, lidl, aldi, waitrose, ocado, chemist4u, pharmacy2u, lloydspharmacy]
+  persona_patterns: ['expert\b', 'reviews?\b', insider, blog, journal, digest, 'tips\b', interview, challenge, explained, '\bdaily\b',
+                     '[가-힣]', 'health-?blog', 'wellness-?blog', 'radar\b', 'insights\b']
+  clinic_patterns: [clinic, aesthetic, injectable, botox, filler, polynucleotide, vitaran, pharma, dental,
+                    wholesale, '\btrade\b', '\bb2b\b', '\bgp\b']
+  non_category_patterns: [throat, '\bgut\b', equine, fashion, 'hair removal', ulike, 'smile', "men's club", makeup,
+                          shave, dormeo, curaprox, mattress]
+  non_uk_patterns: ['\.us$', '-us\.', '\.com\.au$', '\.ca$', '\.co\.nz$', '\.in$', '\bus$', '\busa\b']
+  promo_patterns: ['\d{1,3}\s?%\s*off', '\bsale\b', '\bdeals?\b', '\bdiscount', 'free (delivery|shipping)',
+                   '\bbuy \d', 'bogo', 'prime day', 'black friday', 'limited time', 'clearance', 'save £?\d',
+                   'today only', '\boffer\b', 'shop now']

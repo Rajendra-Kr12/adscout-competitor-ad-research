@@ -182,14 +182,15 @@ def iter_ads(transport, url: str, params: dict, *, max_pages: int = 50, on_page=
 
 
 def build_params(*, page_ids, search_terms, countries, date_min, date_max, media_type,
-                 limit, token, search_type: str = "KEYWORD_EXACT_PHRASE") -> dict:
+                 limit, token, search_type: str = "KEYWORD_EXACT_PHRASE", fields: list[str] | None = None) -> dict:
+    """fields: a lean field list for discovery (scripts/discover_keywords.py); default is the full FIELDS."""
     params = {
         "ad_reached_countries": json.dumps(countries),
         "ad_active_status": "ALL",
         "ad_type": "ALL",
         "ad_delivery_date_min": date_min,
         "ad_delivery_date_max": date_max,
-        "fields": ",".join(FIELDS),
+        "fields": ",".join(fields or FIELDS),
         "limit": str(limit),
     }
     if page_ids:

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Enforce the retention policy (AGENTS.md, docs/compliance.md).
 
-data/raw/ and data/llm/: 180 days. data/media/: 90 days. Age is file mtime.
+data/raw/, data/llm/ and data/discovery/ (keyword discovery records): 180 days. data/media/: 90 days.
+Age is file mtime.
 Dry run by default; pass --apply to delete.
 """
 from __future__ import annotations
@@ -13,7 +14,7 @@ from pathlib import Path
 
 from common import DATA_DIR
 
-RETENTION_DAYS = {"raw": 180, "llm": 180, "media": 90}
+RETENTION_DAYS = {"raw": 180, "llm": 180, "discovery": 180, "media": 90}
 
 
 def expired(data_dir: Path, now: float) -> list[Path]:

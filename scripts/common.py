@@ -14,6 +14,7 @@ DATA_DIR = ROOT / "data"
 REPORTS_DIR = ROOT / "reports"
 CONFIG_PATH = ROOT / "config" / "competitors.yaml"
 GUARD_CONFIG_PATH = ROOT / "config" / "guard.yaml"
+DISCOVERY_CONFIG_PATH = ROOT / "config" / "discovery.yaml"
 SCHEMA_PATH = ROOT / "schemas" / "ad.schema.json"
 
 DEFAULT_API_VERSION = "v26.0"
@@ -76,6 +77,11 @@ def load_env(path: Path | None = None) -> dict[str, str]:
 def load_competitors(path: Path = CONFIG_PATH) -> dict[str, dict]:
     doc = yaml.safe_load(path.read_text()) or {}
     return {c["key"]: c for c in doc.get("competitors", [])}
+
+
+def load_discovery_config(path: Path = DISCOVERY_CONFIG_PATH) -> dict:
+    """Keyword-discovery settings: stopwords, lean search fields and budget, advertiser exclusion patterns."""
+    return yaml.safe_load(Path(path).read_text()) or {}
 
 
 # --- dates and months -----------------------------------------------------
@@ -141,6 +147,25 @@ def month_windows(since: str, until: str, last_day: date | None = None) -> list[
     if last_day is not None:
         windows = [(a, min(b, last_day)) for a, b in windows if a <= last_day]
     return [(a.isoformat(), b.isoformat()) for a, b in windows]
+
+
+def week_windows(since: str, until: str, last_day: date | None = None) -> list[tuple[str, str]]:
+    """7-day (min, max) YYYY-MM-DD windows from the 1st of `since` to the end of `until` (YYYY-MM).
+
+    The last window is shortened to the month end; last_day clamps like month_windows. Keyword discovery uses
+    these so the API's newest-first page caps sample every week, not only the last days of the range."""
+    start = parse_month(since)
+    end = date.fromordinal(next_month(parse_month(until)).toordinal() - 1)
+    if end < start:
+        raise ValueError(f"--until {until} is before --since {since}")
+    if last_day is not None:
+        end = min(end, last_day)
+    windows, cur = [], start
+    while cur <= end:
+        stop = min(cur + timedelta(days=6), end)
+        windows.append((cur.isoformat(), stop.isoformat()))
+        cur = stop + timedelta(days=1)
+    return windows
 
 
 def utc_now() -> datetime:
