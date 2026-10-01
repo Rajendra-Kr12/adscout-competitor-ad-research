@@ -1,0 +1,189 @@
+# Research project, written by scripts/project.py (research-brands intake; schemas/project.schema.json).
+# Brand names, public Page IDs and preferences only - never Platform Data. `coverage` is derived:
+# edit `countries` (or run project.py set-countries) instead.
+schema_version: project-v1
+project: uk-natural-skincare-2026
+title: UK natural skincare - 8 brands, 9 Pages (GB + Odylique FR/BE/LU)
+created: '2026-10-01'
+intake_version: intake-v1
+brands:
+- key: ayumi-naturals
+  name: Ayumi Naturals
+  page_ids:
+  - '269145769896558'
+  page_id_source: user
+  search_terms: Ayumi Naturals
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: spa-ceylon-uk
+  name: Spa Ceylon UK
+  page_ids:
+  - '113962777140977'
+  page_id_source: user
+  search_terms: Spa Ceylon UK
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: upcircle
+  name: UpCircle
+  page_ids:
+  - '1673121366299829'
+  page_id_source: user
+  search_terms: UpCircle
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: evolve-beauty
+  name: Evolve Beauty
+  page_ids:
+  - '127041621106'
+  page_id_source: user
+  search_terms: Evolve Beauty
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: dr-organic
+  name: Dr Organic
+  page_ids:
+  - '201761436618565'
+  page_id_source: user
+  search_terms: Dr Organic
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: odylique-uk
+  name: Odylique UK
+  page_ids:
+  - '21717382034'
+  page_id_source: user
+  search_terms: Odylique UK
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: odylique-france
+  name: Odylique France
+  page_ids:
+  - '163369533533001'
+  page_id_source: user
+  search_terms: Odylique France
+  countries:
+  - FR
+  - BE
+  - LU
+  coverage:
+    ads_archive:
+    - FR
+    - BE
+    - LU
+    mcp: []
+    plan: 'FR, BE, LU: ads_archive (official API) gives full detail for commercial ads delivered there in the past
+      year: primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU
+      reach, age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: conscious-skincare
+  name: Conscious Skincare
+  page_ids:
+  - '393747394007988'
+  page_id_source: user
+  search_terms: Conscious Skincare
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: lucy-bee
+  name: Lucy Bee
+  page_ids:
+  - '100553123409882'
+  page_id_source: user
+  search_terms: Lucy Bee
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+markets:
+- GB
+window:
+  since: 2026-07
+  until: 2026-09
+goal: messaging-creative
+layout: project/date/brand
+output_root: /Users/raj/Documents/Work + Portfolio/2026 Y/Facebook CM Agent/reports
+outputs:
+  markdown: true
+  xlsx: true
+  csv: true
+  html: false
+  drive: false
+visuals:
+  route: none
+  window_days: 90
+  max_ads_per_brand: 30
+  video: keyframes
+monitor:
+  cadence: daily+weekly-digest
+  time: 08:00
+  watch:
+  - new_ads
+  - stopped_ads
+  - offers
+  alerts:
+  - digest
+  - macos
+critic:
+  last_verdict: approve
+  stage: report
+  at: '2026-10-01T04:44:52Z'
+  prompt_version: critic-v1
+notes: 'Scope (captain, 2026-10-01): each brand''s own Page only. Not counted: Spa Ceylon franchise Pages (GR, HR,
+  LT, SK, CZ, AT), Dr Organic EU distributor Pages and Holland & Barrett Pages (Dr Organic sells mainly through
+  H&B, so its own Page undercounts its Meta presence), UpCircle creator partnership Pages, and the unrelated "Dr
+  Organic Logic" Page. Shobhna''s Ayurveda dropped (ghee, not skincare). Window cut to Jul-Sep 2026 to fit one guarded
+  run. Activity outside the EU/UK (Spa Ceylon Asia; US arms of UpCircle, Evolve, Odylique, Lucy Bee) is not visible
+  to ads_archive. LLM fields cover a sample of up to 30 ads per brand (up to 10 newest per month, duplicate copy skipped);
+  deterministic fields cover every ad.'
