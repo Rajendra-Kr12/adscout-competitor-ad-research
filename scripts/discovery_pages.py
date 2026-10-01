@@ -4,8 +4,9 @@
 Discovery step 3 (skill meta-keyword-discovery). No API calls: reads data/discovery/<name>/<run>.jsonl from
 scripts/discover_keywords.py (lean records: Page, dates, headlines, link captions).
 
-Every Page gets one class, by the first rule that applies (criteria and thresholds: config/discovery.yaml
-`pages`, overridable with --config):
+Every Page gets one class, by the first rule that applies. The full ordered list (14 rules) is in
+.claude/skills/meta-keyword-discovery/references/classification.md; patterns and thresholds are in
+config/discovery.yaml `pages`, overridable with --config. In short:
   known                    already tracked (project brands, competitors.yaml, --exclude-page): not a candidate
   drop:clinic              clinic, injectables or B2B supplier (name, domain or headline)
   drop:off-category        non-skincare (name or domain) or a non-UK/EU market domain or name

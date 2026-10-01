@@ -229,7 +229,9 @@ never run them as formulas).
 
 ### Keyword discovery (optional deep-dive step)
 
-In Claude Code: `/meta-keyword-discovery <project-slug>` (`.claude/skills/meta-keyword-discovery/SKILL.md`). It finds
+In Claude Code: `/meta-keyword-discovery <project-slug>` (`.claude/skills/meta-keyword-discovery/SKILL.md`: rules and
+cautions first, then the workflow; detail in its `references/`: classification criteria, commands, report template,
+worked example). It finds
 competitors you are not tracking yet, from the words your tracked brands lead their ads with, then **stops for your
 pick** before any deep dive. The same steps by hand:
 

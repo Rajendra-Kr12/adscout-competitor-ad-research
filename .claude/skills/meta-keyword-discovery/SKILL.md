@@ -1,119 +1,59 @@
 ---
 name: meta-keyword-discovery
-description: Optional deep-dive step after a multi-brand project. Finds new competitors through Ad Library keyword search. It takes the most distinctive phrases the known brands lead their ads with (weighted by distinct copy cluster), searches them through the API guard with lean fields, monthly or weekly windows and a hard call budget, classifies every advertiser Page by explicit criteria (brand owner, brand-led channel kept; multi-brand retail, advertorial or fake-blog, clinic or B2B, off-category dropped with a logged reason), and proposes 6-8 candidates with a recommended 3-4. It then STOPS for the user's pick and hands the chosen Page IDs to the normal project pipeline. Use for "/meta-keyword-discovery <project-slug>", "find brands like these", or "who else advertises on these keywords".
+description: Find NEW competitor brands from Meta Ad Library keyword search, as an optional step after a multi-brand project. It ranks the phrases the tracked brands lead their ads with (by distinct message), searches them through the API guard (lean fields, hard call budget, monthly or weekly windows, stop on first warning), classifies every advertiser Page (brand owner and brand-led channel kept; retail promo, persona or fake-blog funnels, clinics and off-category dropped with a logged reason), proposes 6-8 candidates with a recommended 3-4, then STOPS for the user's pick. Use it whenever the user asks "who else advertises on these keywords", "find brands like these", "discover new competitors", "what other brands pop up for these words", "keyword discovery" or "/meta-keyword-discovery <project-slug>", even without naming the skill. Not for researching brands already chosen (use /research-brands) or one known brand (/analyze-competitor).
 argument-hint: <project-slug> [--window month|week] [--budget N] [--fixture]
 ---
 
-# /meta-keyword-discovery (find new competitors by keyword)
+# /meta-keyword-discovery
 
-Read the project `AGENTS.md` first; its rules override anything here. Run this skill in the **main thread**,
-because step 4 asks the user to choose. Use `.venv/bin/python` for every script. Background: README
-"Keyword discovery"; settings and exclusion lists live in `config/discovery.yaml`, not in code.
+**Use it** after `/research-brands` has run a project: it needs that project's normalized ads. The goal is a
+shortlist of brands the user is not tracking yet, for a later deep dive.
 
-## Your obligations
+**Do not use it** to research brands the user already named (`/research-brands`), for one known Page
+(`/analyze-competitor`), outside the EU/UK (ads_archive has no commercial ads there), or for market share,
+spend or reach.
 
-- Every Meta call goes through `scripts/discover_keywords.py`, which uses the API guard. Never call the
-  Ad Library another way, never open facebook.com, and never retry after a stop. On any `STOPPED` line or guard
-  refusal, stop and relay it.
-- Stay within the budget the user gave (default 25 ads_archive calls; the daily token check is extra). The
-  script refuses a plan that could exceed it; reduce keywords or windows rather than raising the budget yourself.
-- Keyword search returns a **sample**: the API serves the newest ads first and each window is capped. Say so
-  wherever you present counts, and never present them as market share, spend or reach.
-- Never pick the final brands. Propose; the user decides. Never present a Page ID as confirmed until the user
-  confirms it.
-- Discovery records have no ad text and no snapshot links. Keep it that way: cite ads only as
-  `https://www.facebook.com/ads/library/?id=<library_id>`.
+Run it in the **main thread**: step 4 asks the user to choose. The project `AGENTS.md` overrides anything here.
 
-## 1. Keywords (no API calls)
+## Read this first: rules and cautions
 
-The project must already have normalized ads (`run_project.py` has run):
+1. **Official Ad Library API only.** Never scrape facebook.com or the Ad Library website, and never open them with
+   a browser tool. Cite ads only as `https://www.facebook.com/ads/library/?id=<library_id>`.
+2. **Every call goes through the guard** (`scripts/discover_keywords.py`). Stay inside the call budget (default 25);
+   the script refuses a plan that could exceed it. It stops at the first usage warning, error or guard stop.
+   Relay the stop; never retry it and never raise caps.
+3. **Results are newest first and capped.** One window over a quarter samples only its last days (round 1: 4 of 5
+   keywords covered only 28-30 Sep). Always split by `--window month` (or `week` for 1-2 keywords).
+4. **Exact phrases miss synonyms** ("dark circles" does not find "under-eye"). Pick terms as the market writes them;
+   use `:unordered` for a word that needs context ("menopause skin:unordered").
+5. **Lean fields only, no retries.** Heavy pages trigger Meta's code 1 "reduce the amount of data"; retrying the
+   same request never helps. Discovery asks for Page, dates, headline and caption only (~300 ads per page).
+6. **Never drop retailers or distributors wholesale.** A retailer, distributor or creator whose ads speak for one
+   established brand is a **channel**: keep it and tag the brand. Brands selling via Amazon are brand owners.
+   Drop only multi-brand price-and-promo retail.
+7. **Persona and fake-blog funnels are the main noise:** person-named, "expert", "magazine" or "over 40" Pages
+   pushing small DTC brands. They are dropped, with the brand they push logged.
+8. **"Unverified" is the weakest judgement and usually the biggest bucket.** Tell the user to skim the
+   **Dropped and why** table; every dropped Page is listed so they can overrule it.
+9. **Classification reads headlines and link captions only** (no ad text in discovery). Say so in the report.
+10. **Keyword results are a sample, not the market.** Never present counts as share, spend or reach.
+11. **Always STOP for the user's brand pick** before any deep-dive fetch.
+12. **A brand seen only via a creator or retailer** (round 1: Himalaya) needs its own Page looked up by name
+    (`discover_pages.py --name "<Brand>"`, 1 call) before anyone concludes it does not advertise.
 
-```
-.venv/bin/python scripts/keyword_terms.py --project <slug> --language en --out reports/<slug>/<date>/discovery/terms.json
-```
+## Workflow
 
-Pick **5** search terms from the top of the list:
-- skincare- or category-specific, not generic ("dark circles", "hyaluronic acid", not "without compromise");
-- not overlapping each other ("dark circles" or "tired eyes", not both);
-- preferably used by 2 or more brands.
+1. **Terms** (no calls): `scripts/keyword_terms.py --project <slug>`. Pick 5 specific, non-overlapping terms.
+   Commands and flags: [references/commands.md](references/commands.md).
+2. **Search** (through the guard): `scripts/discover_keywords.py ... --window month --dry-run`. Show the call
+   ceiling, then run it without `--dry-run`.
+3. **Classify** (no calls): `scripts/discovery_pages.py --name <slug> --project <slug> --tables-md ...`. The criteria
+   and when to overrule them are in [references/classification.md](references/classification.md).
+4. **Propose, then STOP:** write the report from [references/report-template.md](references/report-template.md),
+   then ask the user to pick with `AskUserQuestion`.
+5. **Hand off** the chosen Page IDs: `project.py new <slug>-discovery --brand "Name:GB@<id>"`, then
+   `/research-brands <slug>-discovery`.
 
-A strong single word that only makes sense with context can be searched as unordered words
-(`"menopause skin:unordered"`). Write each choice down with its cluster and brand counts.
-
-## 2. Search (through the guard)
-
-Dry-run first and show the user the call ceiling, then run it:
-
-```
-.venv/bin/python scripts/discover_keywords.py --name <slug> --keyword "dark circles" --keyword "aloe vera" ... \
-    --country GB --since <YYYY-MM> --until <YYYY-MM> --window month --pages-per-window 1 --budget 25 --dry-run
-.venv/bin/python scripts/discover_keywords.py ...same arguments without --dry-run...
-```
-
-- Use `--window month` with 1 page per window for a quarter (5 keywords x 3 months = 15 calls). Use `--window week`
-  only for 1-2 keywords or a single month, because it multiplies the calls. One window over the whole range is
-  biased: in the 2026-10-01 run, 4 of 5 keywords' samples all started in the last 3 days.
-- Exit code 2 means the run stopped (an error, the budget, or a usage warning). The records so far are kept;
-  relay the reason and do not rerun in the same hour without the user.
-
-## 3. Classify advertisers (no API calls)
-
-```
-.venv/bin/python scripts/discovery_pages.py --name <slug> --project <slug> --top 30 \
-    --out reports/<slug>/<date>/discovery/pages.json --tables-md reports/<slug>/<date>/discovery/tables.md
-```
-
-Every Page gets one class, by the first rule that applies. Thresholds and pattern lists are in
-`config/discovery.yaml` `pages` (`--config` for a variant):
-
-| Class | Criterion (scripted) | Outcome |
-|---|---|---|
-| known | Page ID already in the project or competitors.yaml | listed, not a candidate |
-| drop:clinic | clinic, injectables or B2B patterns in the name, domain or a headline | dropped: a different audience |
-| drop:off-category | non-skincare patterns, or a non-UK/EU domain or Page name | dropped |
-| brand | Page name contains a `known_brands` entry (wherever it links, Amazon included) | **kept** |
-| drop:advertorial | persona, expert, review, blog or interview patterns in the name or domain | dropped, pushed brand logged |
-| brand | another Page of the brand it carries | **kept** |
-| channel | brand share ≥ `brand_share_min` (0.5) for an **established** brand (known_brands, project, competitors.yaml) | **kept**, tagged with the brand |
-| drop:advertorial | brand share ≥ 0.5 for a brand seen only in this sample (affiliate funnel) | dropped, brand logged |
-| drop:multi-brand-retail | a Page named as a retailer or marketplace, no single brand | dropped, counted |
-| brand | own-brand share ≥ 0.5, or the landing domain matches the Page name, or it links only to a marketplace and names no other brand | **kept** |
-| drop:reseller-funnel | none of the above and promo share ≥ `promo_share_min` (0.5) | dropped |
-| drop:unverified | none of the above | dropped |
-
-"Brand share" is the share of a Page's ads (with a headline or caption) that name the same lexicon brand. A
-caption that is the brand's own shop domain counts. The lexicon is `known_brands`, plus the project's and
-competitors.yaml brands, plus brand-owner Page names from the sample (minus `lexicon_stopwords`).
-
-Never silently drop a Page. The report must include the generated **Dropped and why** table (every dropped
-Page, its reason, ads and carried brand) so the user can overrule it, and the **Channel versus brand
-messaging** table (the same brand on its own Page vs other Pages). If you overrule a class, say which and why.
-Then judge the kept Pages: prefer the same market (a `.uk` site or UK Page) and category, and treat
-look-alike dropship shops with care even when the rules call them brand owners.
-
-## 4. Propose, then STOP
-
-Write `reports/<slug>/<date>/discovery/discovery.md` in plain English:
-- the keywords and why each was chosen;
-- the calls spent and any stop;
-- a table of 6-8 candidates: name, class (brand, or channel with the brand it carries), Page ID, ads in sample,
-  live, keywords matched, and one line on why each is relevant;
-- your recommended 3-4 for a deep dive. They must not duplicate each other or the known brands, and should
-  cover different angles;
-- caveats: a sample, not the market; exact-phrase limits; UK/EU commercial ads only; unverified candidates;
-  classification uses headlines and captions only;
-- the generated tables from step 3 (candidates, channel versus brand, dropped and why), unedited.
-
-Then ask the user to choose with `AskUserQuestion` (multi-select, recommended first). **Do not fetch anything
-for the candidates before the user answers.**
-
-## 5. Hand off the chosen brands
-
-Add the chosen Pages to a project and run the normal pipeline:
-
-```
-.venv/bin/python scripts/project.py new <slug>-discovery --brand "Name:GB@<page_id>" ... [answers]   # or set-page on an existing project
-```
-
-Then follow `/research-brands <slug>-discovery` from its plan gate: the critic, `run_project.py`, extraction and
-reports. That flow's budget and caveats apply from here on.
+For calibration, see the worked example from the first run (keywords, the newest-first lesson, v1 vs v2
+classification, Himalaya via a creator): [references/worked-example-round1.md](references/worked-example-round1.md).
+Settings and criteria live in `config/discovery.yaml`; background is in README "Keyword discovery".
