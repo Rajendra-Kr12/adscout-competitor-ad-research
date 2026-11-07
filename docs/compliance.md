@@ -10,6 +10,16 @@ The things this project always does, never does, and why. The full analysis and 
 | Meta-hosted Ads MCP server `https://mcp.facebook.com/ads`, tool `ads_library_search` only (spike done; not connected yet), then own-account work in Phase 3 | Driving facebook.com with a browser agent (Claude in Chrome, computer use, Playwright, chrome-devtools) |
 | A human looking at the Ad Library website | Third-party "Meta Ads MCP" servers that hold our token |
 | Per-ad creative download **for analysis** (Phase 1, not built) | Bulk mirroring of a competitor's creatives |
+| Unsplash API `https://api.unsplash.com` (search, and download tracking when a human picks a photo), through `scripts/unsplash_refs.py` | Storing or mirroring Unsplash images, using results to train or fine-tune a model, or calling Unsplash outside its limiter |
+| A human looking at Pinterest and pasting links into the handoff | Any Pinterest call, pin search, scraper, browser agent or third-party Pinterest MCP; storing Pinterest data (Trends is prepared but off: `docs/pinterest-trends.md`) |
+
+Unsplash rules (https://unsplash.com/api-terms, https://help.unsplash.com/en/articles/2511245): hotlink the URLs the
+API returns; credit the photographer and Unsplash with UTM-tagged links; call the download-tracking endpoint when a
+photo is chosen (`unsplash_refs.py choose`, a human action); stay inside demo mode's 50 requests/hour with the local
+limiter in `config/guard.yaml` (`unsplash:`); keep only ids, links and credits (`data/unsplash/`, 180 days). The key
+lives in `.env` (0600) or the environment as `UNSPLASH_ACCESS_KEY`, is read only by `scripts/unsplash_store.py`, and
+only its fingerprint is shown. Unsplash photos are stock mood references, never competitor creative and never ad material
+without checking the Unsplash licence for that use.
 
 Meta Ads MCP rules, for when the route is connected (`scripts/mcp_source.py` is a stub until then):
 
@@ -80,6 +90,7 @@ Meta: "When the limit has been reached, stop making API calls. Continuing to mak
 |---|---|---|
 | Raw API pulls (token stripped, 0600) | `data/raw/` | 180 days |
 | LLM batch inputs and outputs | `data/llm/` | 180 days |
+| Unsplash suggestion records (ids, links, credits; no images) | `data/unsplash/` | 180 days |
 | Creative media (Phase 1) | `data/media/` | 90 days |
 | Normalized ads | `data/ads/` | While the analysis is in use. Re-derivable from raw |
 | Reports (analysis, including `-ads.csv`) | `reports/` | Kept |

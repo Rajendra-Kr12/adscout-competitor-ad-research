@@ -21,7 +21,8 @@ Read the project `AGENTS.md` first; its rules override anything here.
    - Demo: `.venv/bin/python scripts/export_handoff.py demo --fixture tests/fixtures/ads_archive_synthetic.json`
    - Real: `.venv/bin/python scripts/export_handoff.py <slug>` (add `--dry-run` first to see what it would read).
 2. Read `handoff/<slug>.md` back to the user in chat (it is one page). Mention how many ads had the LLM extract step (angles/tone); if few, offer `/analyze-competitor` extraction first, because hooks then become real angles instead of first lines.
-3. The brief ends with `## Visual direction` (stored fields only; framing, colour and text-on-image are Unknown because the API has no image fields) and an empty `## Reference links (human picks)` block. Leave that block for the captain: never fill it, and never pull Pinterest or other pins or download media for it.
+3. The brief ends with `## Visual direction` (stored fields only; framing, colour and text-on-image are Unknown because the API has no image fields) and an empty `## Reference links (human picks)` block. Leave that block for the captain, and never pull Pinterest or other pins or download media for it.
+   - Optional, only when the user asks for photo inspiration: `.venv/bin/python scripts/export_handoff.py <slug> --unsplash` (or `scripts/unsplash_refs.py suggest <slug>`) adds 3-5 official-API Unsplash suggestions to that block, unchecked and labelled "NOT confirmed". Without a key it writes a labelled `SAMPLE RESULT`; say so when you read the file back. Never run `unsplash_refs.py choose`: that is the human's pick and it calls Unsplash's download tracking. Use `--dry-run` first to show the plan. Unsplash photos are stock mood references, not competitor creative, and never training data.
 4. Do not add claims to the file. Observed/Pattern lines come from counts; Hypothesis lines are the only place for interpretation.
 
 The format is documented in README "Handoff to the Instagram creative agent".

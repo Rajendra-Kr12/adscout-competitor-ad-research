@@ -22,3 +22,15 @@ token:
   store: env                   # env (.env, 0600) or keychain (macOS Keychain "fbcm.meta"); see token_store.py
   warn_days: [14, 7, 3]        # expiry warnings (token_cli.py status)
   status_cache_hours: 24       # debug_token is called at most this often by preflight
+
+# Unsplash photo suggestions (scripts/unsplash_refs.py). Not a Meta call, so it has its own limiter and state
+# (data/state/unsplash/), not the Meta kill switch. Demo-mode keys allow 50 requests/hour; stay well under it.
+unsplash:
+  min_interval_s: 2.0          # spacing between calls (plus up to 50% jitter)
+  max_calls_per_run: 3         # a normal run is 1 search; choosing a photo is 1 tracking call
+  max_calls_per_hour: 40
+  max_calls_per_day: 200
+  rate_cooldown_min: 60        # HTTP 429, 403 "rate limit", or X-Ratelimit-Remaining <= low_remaining: never retried
+  key_cooldown_min: 1440       # 401 or another 403: the key is wrong or revoked
+  low_remaining: 3
+  timeout_s: 30

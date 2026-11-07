@@ -10,6 +10,11 @@ Observed / Pattern / Hypothesis / Unknown. No spend, CPM, CPA or ROAS, no tokens
 Usage:
   python scripts/export_handoff.py <project-slug | brand-key> [--dry-run] [--date YYYY-MM-DD]
   python scripts/export_handoff.py synthetic --fixture tests/fixtures/ads_archive_synthetic.json
+  python scripts/export_handoff.py <slug> --unsplash [--query "natural skincare"]   # optional: Unsplash suggestions
+
+The brief itself stays offline. `--unsplash` is a separate, opt-in step run after the file is written
+(scripts/unsplash_refs.py): it fills the Reference links block with 3-5 Unsplash suggestions a human confirms,
+or a labelled SAMPLE result when there is no key.
 """
 from __future__ import annotations
 
@@ -194,7 +199,7 @@ def visual_direction(covered: list[dict], total: int) -> list[str]:
     L.append("- Unknown: framing, colour, styling and text-on-image habits. The Ad Library API gives text and "
              "metadata, not image fields, and nothing is downloaded or scraped to fill the gap.")
     L += ["", "## Reference links (human picks)",
-          "<!-- Captain fills these in. Never auto-filled; no Pinterest or other pins pulled by the agent. -->",
+          "<!-- Captain fills these in. Not auto-filled (only the opt-in --unsplash step adds marked suggestions); no Pinterest or other pins pulled by the agent. -->",
           "- [ ] 1. (link) - what to take from it:",
           "- [ ] 2. (link) - what to take from it:",
           "- [ ] 3. (link) - what to take from it:"]
@@ -307,6 +312,9 @@ def main(argv=None) -> int:
     ap.add_argument("--fixture", type=Path, help="build the synthetic dataset offline from this fixture")
     ap.add_argument("--dry-run", action="store_true", help="print what would be read and written; write nothing")
     ap.add_argument("--date", help="stamp date YYYY-MM-DD (default: today, UTC)")
+    ap.add_argument("--unsplash", action="store_true",
+                    help="after writing, add Unsplash photo suggestions (labelled SAMPLE without a key) to Reference links")
+    ap.add_argument("--query", help="with --unsplash: search words (default: category from the project title)")
     ap.add_argument("--data-dir", type=Path, default=DATA_DIR)
     ap.add_argument("--reports-dir", type=Path, default=REPORTS_DIR)
     ap.add_argument("--projects-dir", type=Path, default=projects.PROJECTS_DIR)
@@ -346,6 +354,11 @@ def main(argv=None) -> int:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(text)
         print(target)
+        if args.unsplash:
+            import unsplash_refs
+            query = args.query or ("natural skincare" if args.fixture else None)
+            return unsplash_refs.suggest(args.slug, query=query, handoff_dir=args.out_dir, projects_dir=args.projects_dir,
+                                         data_dir=args.data_dir)
         return 0
     except (HandoffError, projects.ProjectError) as exc:
         print(f"error: {exc}", file=sys.stderr)

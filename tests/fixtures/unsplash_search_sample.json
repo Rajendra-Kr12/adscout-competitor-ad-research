@@ -1,0 +1,27 @@
+{
+  "_note": "SAMPLE / SYNTHETIC. Placeholder results in the shape of GET /search/photos so a demo runs without an Unsplash key. These are not real photos, photographers or links.",
+  "total": 4,
+  "total_pages": 1,
+  "results": [
+    {"id": "sample-photo-1", "alt_description": "sample: bottle on a linen cloth in soft window light",
+     "urls": {"small": "https://images.unsplash.com/sample-photo-1?w=400"},
+     "links": {"html": "https://unsplash.com/photos/sample-photo-1",
+               "download_location": "https://api.unsplash.com/photos/sample-photo-1/download?ixid=sample"},
+     "user": {"name": "Sample Photographer A", "links": {"html": "https://unsplash.com/@sample_a"}}},
+    {"id": "sample-photo-2", "alt_description": "sample: green leaves and a jar on a pale stone shelf",
+     "urls": {"small": "https://images.unsplash.com/sample-photo-2?w=400"},
+     "links": {"html": "https://unsplash.com/photos/sample-photo-2",
+               "download_location": "https://api.unsplash.com/photos/sample-photo-2/download?ixid=sample"},
+     "user": {"name": "Sample Photographer B", "links": {"html": "https://unsplash.com/@sample_b"}}},
+    {"id": "sample-photo-3", "alt_description": "sample: warm terracotta tones with a hand holding a dropper",
+     "urls": {"small": "https://images.unsplash.com/sample-photo-3?w=400"},
+     "links": {"html": "https://unsplash.com/photos/sample-photo-3",
+               "download_location": "https://api.unsplash.com/photos/sample-photo-3/download?ixid=sample"},
+     "user": {"name": "Sample Photographer C", "links": {"html": "https://unsplash.com/@sample_c"}}},
+    {"id": "sample-photo-4", "alt_description": "sample: flat lay of botanicals on a cream background",
+     "urls": {"small": "https://images.unsplash.com/sample-photo-4?w=400"},
+     "links": {"html": "https://unsplash.com/photos/sample-photo-4",
+               "download_location": "https://api.unsplash.com/photos/sample-photo-4/download?ixid=sample"},
+     "user": {"name": "Sample Photographer D", "links": {"html": "https://unsplash.com/@sample_d"}}}
+  ]
+}

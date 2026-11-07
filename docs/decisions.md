@@ -2,6 +2,16 @@
 
 Newest first. Each entry records the decision, why it was made, and the status.
 
+## 2026-11-07 - Visual inspiration: Unsplash now, Pinterest Trends prepared but off (captain, after the Pinterest scout report)
+
+| # | Decision | Why | Status |
+|---|---|---|---|
+| 72 | Photo inspiration comes from the **official Unsplash API** (`scripts/unsplash_refs.py`, opt-in via `export_handoff.py --unsplash`), reaching the Instagram demo only through the handoff's Reference links block as 3-5 unchecked suggestions a human confirms. The brief itself stays offline | Pinterest pin search is a closed beta, its MCP is a waitlist, and its rules bar storing pins and competitor research. Unsplash is open, free and demo-able; it is stock photography, so it is mood and colour reference only | Built + tested offline (live key not used) |
+| 73 | Unsplash terms are enforced in code: hotlink the returned URLs only (no image is downloaded or stored; `data/unsplash/` keeps ids, links and credits for 180 days), credit photographer and Unsplash with UTM links, call download tracking only in `choose` (a human pick), never use results for model training | API terms s.9 and the API guidelines. The AI/ML clause (s.12) is why the output says "never for model training" | Built |
+| 74 | Unsplash has its **own limiter** (`config/guard.yaml` `unsplash:`, state in `data/state/unsplash/`, call ledger): 3 per run, 40 per hour (demo limit is 50), 200 per day, 2 s spacing, 60 min cooldown on a rate limit, 1 day on a rejected key, no retries. It does not share the Meta guard or kill switch | `guard.py` is Meta-specific (Graph error codes, usage headers, one token); a Unsplash failure should not stop Meta research and vice versa | Built |
+| 75 | The key (`UNSPLASH_ACCESS_KEY`) is read only by `scripts/unsplash_store.py` (env var, else `.env` at 0600), sent in the `Authorization` header, shown as a fingerprint. With no key, or any live failure, the block is a clearly labelled `SAMPLE RESULT` (fake ids) so a demo never breaks; `--require-live` opts out | The captain creates the key themselves; the demo must not depend on it | Built. Captain adds the key and the `.env.example` placeholder |
+| 76 | **Pinterest Trends is prepared, not enabled**: `docs/pinterest-trends.md` plus `scripts/pinterest_trends.py`, a stub with no network code, no credential read and no imports that could reach a network (a test enforces it). The captain must read Pinterest's Developer and API Terms before registering an app. Trends output must not be stored until the storage question is answered | The scout found the Trends API is the only plausible Pinterest fit, but the terms (no storing API data, no competitor research, ads-only use) and Trial approval are unresolved | Prepared; blocked on captain + Pinterest |
+
 ## 2026-11-07 - Handoff to the Instagram creative agent (captain: short, simple, demo-friendly)
 
 | # | Decision | Why | Status |

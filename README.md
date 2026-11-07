@@ -296,8 +296,47 @@ only. Hooks are the extracted `hook` when the extract step ran, otherwise the li
 `## Visual direction` is built only from stored fields (media type when it was queried per type, creative-only ads,
 Instagram placement) and says plainly that framing, colour, styling and text-on-image are Unknown: the Ad Library
 API gives text and metadata, not image fields. Nothing is downloaded or scraped to fill the gap.
-`## Reference links (human picks)` is an empty 3-line placeholder for the captain; the agent never fills it, and
-never pulls Pinterest or other pins.
+`## Reference links (human picks)` is an empty 3-line placeholder for the captain. By default the agent leaves it
+alone and never pulls Pinterest or other pins; the only thing that may fill it is the opt-in Unsplash step below.
+
+### Unsplash photo suggestions (optional)
+
+Pinterest pin search is closed and Pinterest's rules bar storing pins and competitor research, so the visual
+reference step uses the official Unsplash API instead (stock photography for mood, light and colour, not
+competitor creative). It is opt-in and separate from the offline brief:
+
+```bash
+$PY scripts/export_handoff.py <slug> --unsplash                 # write the brief, then add suggestions
+$PY scripts/unsplash_refs.py suggest <slug> [--query "natural skincare"] [--count 4] [--dry-run]
+$PY scripts/unsplash_refs.py choose  <slug> S2                  # a human picked S2: record it
+$PY scripts/unsplash_refs.py status                             # key fingerprint, cooldown, call counts
+```
+
+- **Query.** The product category from the project title (the text before " - ", minus a leading country word:
+  "UK natural skincare - 8 brands" gives "natural skincare"), or `--query`.
+- **Output.** 3-5 lines in the Reference links block, between `unsplash-suggestions` comments, each unchecked
+  (`- [ ] S1 ...`) and headed "NOT confirmed: a human picks". Each has the photo link, the photographer and
+  Unsplash credit (UTM-tagged links, as the API terms ask) and the hotlinked image URL exactly as returned.
+  Re-running replaces the block; lines you filled in yourself stay.
+- **Choosing.** `choose` calls Unsplash's download-tracking endpoint (the API terms require it when a photo is
+  chosen; the image itself is not fetched) and marks the line `[x] ... CONFIRMED by a human`. Only a human runs it.
+- **Key.** Put `UNSPLASH_ACCESS_KEY=...` in `.env` (git-ignored, mode 0600; also add the name to your
+  `.env.example` as an empty placeholder) or export it. Create it yourself at https://unsplash.com/oauth/applications.
+  Only `scripts/unsplash_store.py` reads it; it is sent in the `Authorization` header, never in a URL, and only its
+  fingerprint is ever shown. Demo-mode keys allow 50 requests/hour.
+- **No key, or the call fails** (rate limit, rejected key, network, local cap): the block is filled from a clearly
+  labelled `SAMPLE RESULT` (`tests/fixtures/unsplash_search_sample.json`, fake ids and links) so a demo never breaks.
+  `--require-live` makes it fail instead.
+- **Limits.** `config/guard.yaml` `unsplash:` sets 3 calls per run, 40 per hour (under the 50 demo limit), 200 per
+  day, 2 s spacing; a rate limit or low `X-Ratelimit-Remaining` cools down for 60 minutes, a rejected key for a
+  day; nothing is retried. State and a call ledger live in `data/state/unsplash/`; this limiter is separate from
+  the Meta guard and kill switch.
+- **Terms kept.** Official API only; hotlinks only; nothing downloaded or mirrored; `data/unsplash/<slug>.json` holds
+  ids, links and credits (180 days, no images); results are never used to train or fine-tune a model.
+
+Pinterest Trends is prepared but **off**: `scripts/pinterest_trends.py` is a stub with no network code, and
+`docs/pinterest-trends.md` lists what switching it on needs (app approval, OAuth token, scopes, limits, and the open
+terms questions, starting with you reading Pinterest's Developer and API Terms before registering an app).
 
 ## Meta Ads MCP (tested, not connected)
 
@@ -324,6 +363,7 @@ config/discovery.yaml        keyword discovery: stopwords, lean fields, budget, 
 scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
                              project, discover_pages, run_project, export_xlsx, export_handoff, critique, mcp_source (stub),
                              keyword_terms, discover_keywords, discovery_pages (keyword discovery),
+                             unsplash_refs, unsplash_store (optional photo suggestions), pinterest_trends (disabled stub),
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report and comparison templates, intake, critic (versioned)
 .claude/agents/              ad-extractor, report-writer, research-critic
@@ -332,6 +372,7 @@ prompts/                     extraction, rubric, report and comparison templates
                              export-handoff (one-page brief for the Instagram creative agent)
 data/raw|ads|llm|discovery|media/ local only, git-ignored (retention: AGENTS.md); raw files are 0600, token stripped
 data/state/guard/, data/runs/ guard state and run ledgers (git-ignored; data/* is ignored as a whole)
+data/state/unsplash/, data/unsplash/ Unsplash limiter state + call ledger; suggestion ids and credits (no images)
 reports/<target>/            <date>-competitor-report.md and <date>-ads.csv (git-ignored)
 handoff/<slug>.md            one-page creative-agent brief (git-ignored)
 reports/<project>/           project.md, latest, dated run folders (layout per project; git-ignored)
@@ -341,6 +382,6 @@ tests/                       pytest + synthetic fixtures
 
 ## Retention
 
-`$PY scripts/purge_expired.py` lists files past retention (raw, LLM batches and discovery records 180 days,
-media 90 days);
+`$PY scripts/purge_expired.py` lists files past retention (raw, LLM batches, discovery records and Unsplash
+suggestion records 180 days, media 90 days);
 add `--apply` to delete them.
