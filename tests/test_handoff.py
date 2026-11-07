@@ -13,10 +13,16 @@ def test_fixture_handoff_is_one_tagged_page_without_secrets(tmp_path):
     assert text.count("\n") <= export_handoff.MAX_LINES
     assert "SYNTHETIC DATA" in text
     bullets = [l for l in text.splitlines() if l.startswith("- ")]
-    assert bullets and all(re.match(r"- (Observed|Pattern|Hypothesis|Unknown):", l) for l in bullets if not l.startswith("- Spend") and not l.startswith("- Images"))
+    assert bullets and all(re.match(r"- (Observed|Pattern|Hypothesis|Unknown):", l) for l in bullets if not l.startswith(("- Spend", "- Images", "- [ ]")))
     # a market outside the EU/UK is a stated coverage gap, not an error and not "no ads"
     assert "Synthetic Ayurveda IN (IN): 0 ads" in text and "coverage gap" in text
     assert PERMALINK.search(text)
+    # visual direction: tagged, states the API has no image fields, and the reference block is an empty human placeholder
+    vd = text.split("## Visual direction")[1].split("## Reference links (human picks)")[0]
+    assert "not image fields" in vd and re.search(r"- (Observed|Pattern|Hypothesis|Unknown):", vd)
+    refs = text.split("## Reference links (human picks)")[1].split("## ")[0]
+    assert 3 <= len([l for l in refs.splitlines() if l.startswith("- [ ]")]) <= 5
+    assert "pinterest" not in refs.lower().replace("no pinterest", "") and "http" not in refs
     low = text.lower()
     for bad in ("access_token", "ad_snapshot_url", "snapshot", "eaa"):
         assert bad not in low

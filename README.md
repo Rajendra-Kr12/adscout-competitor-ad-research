@@ -288,10 +288,16 @@ git-ignored (real competitor copy) and refused by the pre-commit hook.
 Format (about 30-70 lines): title; a stamp line (date, source, window, brand and ad counts); the tag legend;
 then `## Coverage` (one line per brand, a 0-ad market says plainly that it is a coverage gap),
 `## What they run`, `## Hooks and angles (longest-running first)` (two hooks per brand with an Ad Library link,
-then offer, tone and price patterns), `## Whitespace (Hypothesis, ...)` and `## Unknown (do not invent)`.
+then offer, tone and price patterns), `## Whitespace (Hypothesis, ...)`, `## Visual direction`, `## Reference links (human picks)` and `## Unknown (do not invent)`.
 Every bullet starts with one tag: Observed (in the ads), Pattern (repeats, with counts), Hypothesis (our
 reading) or Unknown (not available from official sources). Evidence is `https://www.facebook.com/ads/library/?id=<library_id>`
 only. Hooks are the extracted `hook` when the extract step ran, otherwise the literal first line of the ad.
+
+`## Visual direction` is built only from stored fields (media type when it was queried per type, creative-only ads,
+Instagram placement) and says plainly that framing, colour, styling and text-on-image are Unknown: the Ad Library
+API gives text and metadata, not image fields. Nothing is downloaded or scraped to fill the gap.
+`## Reference links (human picks)` is an empty 3-line placeholder for the captain; the agent never fills it, and
+never pulls Pinterest or other pins.
 
 ## Meta Ads MCP (tested, not connected)
 

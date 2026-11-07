@@ -169,6 +169,38 @@ def top_hooks(s: dict) -> list[tuple[str, str, str]]:
     return out
 
 
+def visual_direction(covered: list[dict], total: int) -> list[str]:
+    """Visual direction from stored fields only: the API has no image fields, so this is format and media-type
+    signal plus a plain statement of what is unknown. Never downloads or fetches media."""
+    L = ["", "## Visual direction"]
+    if not covered:
+        L.append("- Unknown: no ads in the covered markets, so there is no visual signal at all.")
+    else:
+        hints = Counter(a["media_type_hint"] for s in covered for a in s["ads"] if a["media_type_hint"])
+        if hints:
+            n = sum(hints.values())
+            L.append(f"- Pattern: media type on {n} of {total} ads: "
+                     + ", ".join(f"{k.lower()} {v}" for k, v in hints.most_common()) + ".")
+        else:
+            L.append("- Unknown: media type (image / video) was not queried per type, so the image-versus-video "
+                     "mix is not known from this data.")
+        co = sum(s["formats"].get("creative-only", 0) for s in covered)
+        if co:
+            L.append(f"- Observed: {co} of {total} ads have no primary text; the visual carries the whole ad.")
+        ig = sum(s["platforms"].get("INSTAGRAM", 0) for s in covered)
+        L.append(f"- Pattern: {ig} of {total} ads list Instagram as a placement.")
+        L.append("- Hypothesis: where copy is short or absent, the product shot is doing the selling; "
+                 "check the framing by eye before briefing a shoot.")
+    L.append("- Unknown: framing, colour, styling and text-on-image habits. The Ad Library API gives text and "
+             "metadata, not image fields, and nothing is downloaded or scraped to fill the gap.")
+    L += ["", "## Reference links (human picks)",
+          "<!-- Captain fills these in. Never auto-filled; no Pinterest or other pins pulled by the agent. -->",
+          "- [ ] 1. (link) - what to take from it:",
+          "- [ ] 2. (link) - what to take from it:",
+          "- [ ] 3. (link) - what to take from it:"]
+    return L
+
+
 def render(title: str, summaries: list[dict], window: str, source: str, today: str, synthetic: bool) -> str:
     covered = [s for s in summaries if s["n"]]
     gaps = [s for s in summaries if not s["n"]]
@@ -237,6 +269,8 @@ def render(title: str, summaries: list[dict], window: str, source: str, today: s
     if gaps:
         L.append(f"- Hypothesis: {', '.join(g['brand']['name'] for g in gaps)} is a blind spot, not an empty lane. "
                  "Do not read the missing ads as a gap to fill.")
+
+    L += visual_direction(covered, total)
 
     L += ["", "## Unknown (do not invent)",
           "- Spend, CPM, CPA, ROAS, impressions and which ads performed: not available from official sources. "

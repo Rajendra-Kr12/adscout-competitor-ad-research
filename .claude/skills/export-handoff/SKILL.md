@@ -21,6 +21,7 @@ Read the project `AGENTS.md` first; its rules override anything here.
    - Demo: `.venv/bin/python scripts/export_handoff.py demo --fixture tests/fixtures/ads_archive_synthetic.json`
    - Real: `.venv/bin/python scripts/export_handoff.py <slug>` (add `--dry-run` first to see what it would read).
 2. Read `handoff/<slug>.md` back to the user in chat (it is one page). Mention how many ads had the LLM extract step (angles/tone); if few, offer `/analyze-competitor` extraction first, because hooks then become real angles instead of first lines.
-3. Do not add claims to the file. Observed/Pattern lines come from counts; Hypothesis lines are the only place for interpretation.
+3. The brief ends with `## Visual direction` (stored fields only; framing, colour and text-on-image are Unknown because the API has no image fields) and an empty `## Reference links (human picks)` block. Leave that block for the captain: never fill it, and never pull Pinterest or other pins or download media for it.
+4. Do not add claims to the file. Observed/Pattern lines come from counts; Hypothesis lines are the only place for interpretation.
 
 The format is documented in README "Handoff to the Instagram creative agent".
