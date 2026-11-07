@@ -5,7 +5,7 @@ Enable once per clone:  git config core.hooksPath .githooks
 
 Blocks staged:
 - .env / .env.* (except .env.example), anything under data/ (except data/.gitkeep),
-  reports/<target>/ and logs/;
+  reports/<target>/, handoff/ and logs/;
 - content with a Meta user-token-shaped string (EAA + 20 or more letters/digits) or an
   access_token= followed by a long real-looking value.
 Only file names and line numbers are printed, never the matched text.
@@ -25,6 +25,8 @@ def blocked_path(path: str) -> str | None:
         return "Platform Data / guard state under data/"
     if path.startswith("reports/") and path != "reports/.gitkeep":
         return "generated report (Platform Data)"
+    if path.startswith("handoff/") and path != "handoff/.gitkeep":
+        return "handoff brief (may hold competitor copy)"
     if path.startswith("logs/"):
         return "log file"
     return None

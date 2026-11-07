@@ -2,6 +2,12 @@
 
 Newest first. Each entry records the decision, why it was made, and the status.
 
+## 2026-11-07 - Handoff to the Instagram creative agent (captain: short, simple, demo-friendly)
+
+| # | Decision | Why | Status |
+|---|---|---|---|
+| 71 | `/export-handoff` + `scripts/export_handoff.py` write a one-page `handoff/<slug>.md` from stored data only, with Observed / Pattern / Hypothesis / Unknown tags and Ad Library permalinks. No LLM and no Meta call in this step; `--fixture` builds the synthetic set offline. `handoff/*` is git-ignored and refused by pre-commit | The creative agent should work from our evidence instead of browsing; a demo must not need a token. Deterministic text keeps the tags honest | Built |
+
 ## 2026-10-01 - Keyword discovery skill (`meta-keyword-discovery`, captain: package the round 1 workflow)
 
 | # | Decision | Why | Status |

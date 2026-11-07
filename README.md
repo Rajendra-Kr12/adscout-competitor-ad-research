@@ -277,6 +277,22 @@ shape. The India-only fixture Page (`--page-id 900000000000002 --country IN`) re
 Page `900000000000003` has a GB-only ad (UK reach, no EU reach), a `creative-only` ad, a DE/AT ad
 (`--country DE`) and a US-only ad that is never returned (`--country US` shows the coverage message).
 
+## Handoff to the Instagram creative agent
+
+`/export-handoff <project-or-brand-slug>` (or `$PY scripts/export_handoff.py <slug>`) writes `handoff/<slug>.md`,
+a one-page brief another agent can build creative angles from. It reads stored data only (no Meta call, no
+browser), so it is demo-safe: `$PY scripts/export_handoff.py demo --fixture tests/fixtures/ads_archive_synthetic.json`
+builds the synthetic dataset offline. `--dry-run` prints what it would read and writes nothing. `handoff/*` is
+git-ignored (real competitor copy) and refused by the pre-commit hook.
+
+Format (about 30-70 lines): title; a stamp line (date, source, window, brand and ad counts); the tag legend;
+then `## Coverage` (one line per brand, a 0-ad market says plainly that it is a coverage gap),
+`## What they run`, `## Hooks and angles (longest-running first)` (two hooks per brand with an Ad Library link,
+then offer, tone and price patterns), `## Whitespace (Hypothesis, ...)` and `## Unknown (do not invent)`.
+Every bullet starts with one tag: Observed (in the ads), Pattern (repeats, with counts), Hypothesis (our
+reading) or Unknown (not available from official sources). Evidence is `https://www.facebook.com/ads/library/?id=<library_id>`
+only. Hooks are the extracted `hook` when the extract step ran, otherwise the literal first line of the ad.
+
 ## Meta Ads MCP (tested, not connected)
 
 The Step-0 spike ran on 2026-09-30 (`docs/decisions.md` #33-#35). `ads_library_search` returns commercial
@@ -300,16 +316,18 @@ config/discovery.yaml        keyword discovery: stopwords, lean fields, budget, 
 .claude/settings.json        permission deny rules + PreToolUse hook (.claude/hooks/guard_pretool.py)
 .githooks/pre-commit         token / Platform Data commit check
 scripts/                     fetch_ads, guard, normalize, text_metrics, llm_batches, build_report,
-                             project, discover_pages, run_project, export_xlsx, critique, mcp_source (stub),
+                             project, discover_pages, run_project, export_xlsx, export_handoff, critique, mcp_source (stub),
                              keyword_terms, discover_keywords, discovery_pages (keyword discovery),
                              purge_expired, fixture_api (offline), common
 prompts/                     extraction, rubric, report and comparison templates, intake, critic (versioned)
 .claude/agents/              ad-extractor, report-writer, research-critic
 .claude/skills/              analyze-competitor (one brand), research-brands (master, several brands),
-                             meta-keyword-discovery (optional: find new competitors by keyword)
+                             meta-keyword-discovery (optional: find new competitors by keyword),
+                             export-handoff (one-page brief for the Instagram creative agent)
 data/raw|ads|llm|discovery|media/ local only, git-ignored (retention: AGENTS.md); raw files are 0600, token stripped
 data/state/guard/, data/runs/ guard state and run ledgers (git-ignored; data/* is ignored as a whole)
 reports/<target>/            <date>-competitor-report.md and <date>-ads.csv (git-ignored)
+handoff/<slug>.md            one-page creative-agent brief (git-ignored)
 reports/<project>/           project.md, latest, dated run folders (layout per project; git-ignored)
 docs/                        research, decisions, compliance
 tests/                       pytest + synthetic fixtures

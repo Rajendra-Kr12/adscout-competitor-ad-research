@@ -11,6 +11,10 @@ data/*
 # Generated reports are Platform Data too; keep them local
 reports/*/
 
+# Handoff briefs may carry real competitor copy; local only
+handoff/*
+!handoff/.gitkeep
+
 # launchd output and guard logs
 logs/
 

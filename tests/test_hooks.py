@@ -117,7 +117,7 @@ def test_pre_commit_rejects_a_staged_token(repo):
 
 def test_pre_commit_rejects_platform_data_and_env(repo):
     d, _ = repo
-    for rel in ("data/raw/fe/run.jsonl", "reports/fe/2026-09-30-competitor-report.md", "logs/x.log", ".env"):
+    for rel in ("data/raw/fe/run.jsonl", "reports/fe/2026-09-30-competitor-report.md", "logs/x.log", "handoff/demo.md", ".env"):
         (d / rel).parent.mkdir(parents=True, exist_ok=True)
         (d / rel).write_text("x\n")
         r = commit(d, "-f", rel)
