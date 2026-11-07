@@ -2,7 +2,7 @@
 """Deterministic plumbing around the ad-extractor sub-agent.
 
 plan:  split normalized ads into batch input files for ad-extractor sub-agents.
-       python scripts/llm_batches.py plan --target <key> [--size 20] [--all]
+       python scripts/llm_batches.py plan --target <key> [--size 20] [--all] [--unique-only]
        -> data/llm/<key>/<batch_run>/input-NN.json (prints one line per batch:
           "<input path> -> <output path>")
 
@@ -59,6 +59,8 @@ def slim(ad: dict) -> dict:
 def plan(args) -> int:
     ads = load_ads(args.data_dir, args.target)
     todo = [ad for _, ad in ads.values() if args.all or ad.get("llm") is None]
+    if args.unique_only:
+        todo = [ad for ad in todo if not ad["derived"].get("near_duplicate_of")]
     todo.sort(key=lambda a: (a["dates"]["delivery_start"] or "", a["library_id"]))
     if not todo:
         print("nothing to extract (all ads have llm{}; pass --all to redo)", file=sys.stderr)
@@ -108,6 +110,8 @@ def main(argv=None) -> int:
     p.add_argument("--target", required=True)
     p.add_argument("--size", type=int, default=20)
     p.add_argument("--all", action="store_true", help="include ads that already have llm{}")
+    p.add_argument("--unique-only", action="store_true",
+                   help="skip near-duplicates (they count as volume only and get no llm{})")
     p.add_argument("--data-dir", type=Path, default=DATA_DIR)
     m = sub.add_parser("merge")
     m.add_argument("--target", required=True)

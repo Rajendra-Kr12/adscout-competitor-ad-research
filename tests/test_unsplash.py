@@ -271,7 +271,8 @@ def test_choose_failure_does_not_mark_the_pick_and_unknown_refs_error(setup):
     assert ur.choose("demo", "S1", limiter=mk(), session=FakeSession(Resp(500, {"errors": ["x"]})), **kw) == 2
     assert "- [x]" not in (hd / "demo.md").read_text()
     assert ur.choose("demo", "S9", limiter=mk(), session=FakeSession(), **kw) == 2
-    assert ur.choose("demo", "S1", limiter=mk(), session=FakeSession(), data_dir=data, handoff_dir=hd, env={}) == 2
+    assert ur.choose("demo", "S1", limiter=mk(), session=FakeSession(), data_dir=data, handoff_dir=hd, env={},
+                     env_path=data / "none.env") == 2
 
 
 def test_choose_refuses_a_download_url_outside_the_api_host(setup):

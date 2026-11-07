@@ -1,0 +1,86 @@
+# Research project, written by scripts/project.py (research-brands intake; schemas/project.schema.json).
+# Brand names, public Page IDs and preferences only - never Platform Data. `coverage` is derived:
+# edit `countries` (or run project.py set-countries) instead.
+schema_version: project-v1
+project: tumblewell-uk
+created: '2026-11-07'
+intake_version: intake-v1
+brands:
+- key: ecover
+  name: Ecover
+  page_ids:
+  - '107728835937605'
+  page_id_source: user
+  search_terms: Ecover
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: kit-kin
+  name: Kit & Kin
+  page_ids:
+  - '1765384590359162'
+  page_id_source: user
+  search_terms: Kit & Kin
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: dettol
+  name: Dettol
+  page_ids:
+  - '191000164248962'
+  page_id_source: user
+  search_terms: Dettol
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+markets:
+- GB
+window:
+  months: 6
+goal: messaging-creative
+layout: project/date/brand
+output_root: reports
+outputs:
+  markdown: true
+  xlsx: true
+  csv: true
+  html: false
+  drive: false
+visuals:
+  route: inbox
+  window_days: 90
+  max_ads_per_brand: 30
+  video: keyframes
+monitor:
+  cadence: daily+weekly-digest
+  time: 08:00
+  watch:
+  - new_ads
+  - stopped_ads
+  - offers
+  alerts:
+  - digest
+  - macos
+critic:
+  last_verdict: revise
+  stage: report
+  at: '2026-11-07T08:09:03Z'
+  prompt_version: critic-v1
