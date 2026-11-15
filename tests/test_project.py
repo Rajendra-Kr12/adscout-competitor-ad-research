@@ -198,6 +198,30 @@ def test_rebuild_keeps_analyst_notes(tmp_path):
     assert len(list((tmp_path / "data" / "runs").glob("*.json"))) == 1  # no new fetch
 
 
+def test_resume_reuses_a_finished_group_without_calls(tmp_path):
+    make(tmp_path, synth_specs()[:1])
+    assert run(tmp_path, "--fixture", str(SYNTHETIC)) == 0
+    run_dir = tmp_path / "reports" / "synth" / "2026-09-29"
+    first = json.loads((run_dir / "run.json").read_text())["groups"][0]
+    ledgers = len(list((tmp_path / "data" / "runs").glob("*.json")))
+    assert first["calls"] > 0 and not first.get("reused")
+
+    assert run(tmp_path, "--fixture", str(SYNTHETIC), "--resume") == 0
+    again = json.loads((run_dir / "run.json").read_text())["groups"][0]
+    assert again["reused"] and again["calls"] == 0 and again["run_id"] == first["run_id"]
+    assert again["unique_ads"] == first["unique_ads"]
+    assert len(list((tmp_path / "data" / "runs").glob("*.json"))) == ledgers  # nothing was fetched
+    assert again["reused_calls"] == first["calls"] and again["ledger"] == f"runs/{first['run_id']}.json"
+    assert f"group 1 reused from run {first['run_id']}, {first['calls']} call(s) spent then" \
+        in (run_dir / "index.md").read_text()
+
+    # Different Pages is a different group: it must be fetched, never silently reused.
+    make(tmp_path, [f"Synthetic Multi:GB@{MULTI_PAGE}"])
+    assert run(tmp_path, "--fixture", str(SYNTHETIC), "--resume") == 0
+    other = json.loads((run_dir / "run.json").read_text())["groups"][0]
+    assert not other.get("reused") and other["calls"] > 0
+
+
 class Throttled:
     def __init__(self):
         self.calls = 0

@@ -56,6 +56,20 @@ def test_renormalize_keeps_llm(tmp_path):
     assert again["llm"] == {"hook": "h"} and again["provenance"]["prompt_version"] == "extract-v1"
 
 
+def test_read_run_survives_unicode_line_separators_in_ad_text(tmp_path):
+    """Ad text can hold U+2028 / U+0085; str.splitlines() would cut such a record in half."""
+    _, raw = run_fixture_fetch(tmp_path, UK_PAGE, "GB")
+    _, before = normalize.read_run(raw)
+    lines = raw.read_text(encoding="utf-8").split("\n")
+    i = next(n for n, l in enumerate(lines) if '"type": "ad"' in l or '"type":"ad"' in l)
+    rec = json.loads(lines[i])
+    rec["ad"]["ad_creative_bodies"] = ["first line second line\u0085third"]
+    lines[i] = json.dumps(rec, ensure_ascii=False)
+    raw.write_text("\n".join(lines), encoding="utf-8")
+    _, after = normalize.read_run(raw)
+    assert len(after) == len(before)
+
+
 def test_coverage_basis_rules():
     live = {"mode": "live", "target": {"countries": ["GB"]}}
     assert normalize.coverage_basis({}, live) == "eu_uk_delivery"

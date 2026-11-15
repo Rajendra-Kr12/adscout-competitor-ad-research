@@ -1,0 +1,255 @@
+# Research project, written by scripts/project.py (research-brands intake; schemas/project.schema.json).
+# Brand names, public Page IDs and preferences only - never Platform Data. `coverage` is derived:
+# edit `countries` (or run project.py set-countries) instead.
+schema_version: project-v1
+project: ph-island-tours-inspiration
+title: Philippines island and boat tours - adventure travel inspiration
+created: '2026-11-07'
+intake_version: intake-v1
+brands:
+- key: tao-philippines
+  name: Tao Philippines
+  page_ids:
+  - '74026363044'
+  page_id_source: user
+  search_terms: Tao Philippines
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: intrepid-travel
+  name: Intrepid Travel
+  page_ids:
+  - '256399545643'
+  page_id_source: user
+  search_terms: Intrepid Travel
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: g-adventures
+  name: G Adventures
+  page_ids:
+  - '322184208702363'
+  page_id_source: user
+  search_terms: G Adventures
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: virgin-experience-days
+  name: Virgin Experience Days
+  page_ids:
+  - '11054317770'
+  page_id_source: user
+  search_terms: Virgin Experience Days
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: buyagift
+  name: Buyagift
+  page_ids:
+  - '30100671591'
+  page_id_source: user
+  search_terms: Buyagift
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: getyourguide
+  name: GetYourGuide
+  page_ids:
+  - '12541391079'
+  page_id_source: user
+  search_terms: GetYourGuide
+  countries:
+  - GB
+  coverage:
+    ads_archive:
+    - GB
+    mcp: []
+    plan: 'GB: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: the-funny-lion-coron
+  name: The Funny Lion Coron
+  page_ids:
+  - '647826592000144'
+  page_id_source: user
+  search_terms: The Funny Lion Coron
+  countries:
+  - GB
+  - IE
+  - DE
+  - FR
+  - ES
+  - IT
+  - NL
+  coverage:
+    ads_archive:
+    - GB
+    - IE
+    - DE
+    - FR
+    - ES
+    - IT
+    - NL
+    mcp: []
+    plan: 'GB, IE, DE, FR, ES, IT, NL: ads_archive (official API) gives full detail for commercial ads delivered
+      there in the past year: primary text, headline, link description, caption, start and stop dates, platforms,
+      languages, UK/EU reach, age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: the-funny-lion-el-nido
+  name: The Funny Lion El Nido
+  page_ids:
+  - '115520433242574'
+  page_id_source: user
+  search_terms: The Funny Lion El Nido
+  countries:
+  - GB
+  - IE
+  - DE
+  - FR
+  - ES
+  - IT
+  - NL
+  coverage:
+    ads_archive:
+    - GB
+    - IE
+    - DE
+    - FR
+    - ES
+    - IT
+    - NL
+    mcp: []
+    plan: 'GB, IE, DE, FR, ES, IT, NL: ads_archive (official API) gives full detail for commercial ads delivered
+      there in the past year: primary text, headline, link description, caption, start and stop dates, platforms,
+      languages, UK/EU reach, age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: experience-palawan
+  name: Experience Palawan
+  page_ids:
+  - '1105287976005082'
+  page_id_source: user
+  search_terms: Experience Palawan
+  countries:
+  - GB
+  - IE
+  - DE
+  - FR
+  - ES
+  - IT
+  - NL
+  coverage:
+    ads_archive:
+    - GB
+    - IE
+    - DE
+    - FR
+    - ES
+    - IT
+    - NL
+    mcp: []
+    plan: 'GB, IE, DE, FR, ES, IT, NL: ads_archive (official API) gives full detail for commercial ads delivered
+      there in the past year: primary text, headline, link description, caption, start and stop dates, platforms,
+      languages, UK/EU reach, age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: discovery-coron
+  name: Discovery Coron
+  page_ids:
+  - '149885681712588'
+  page_id_source: user
+  search_terms: Discovery Coron
+  countries:
+  - GB
+  - IE
+  - DE
+  - FR
+  - ES
+  - IT
+  - NL
+  coverage:
+    ads_archive:
+    - GB
+    - IE
+    - DE
+    - FR
+    - ES
+    - IT
+    - NL
+    mcp: []
+    plan: 'GB, IE, DE, FR, ES, IT, NL: ads_archive (official API) gives full detail for commercial ads delivered
+      there in the past year: primary text, headline, link description, caption, start and stop dates, platforms,
+      languages, UK/EU reach, age x gender reach and targeting. No spend, CTA button or images/video.'
+- key: kia-ora-viaggi
+  name: Kia Ora Viaggi
+  page_ids:
+  - '245258328881452'
+  page_id_source: user
+  search_terms: Kia Ora Viaggi
+  countries:
+  - IT
+  coverage:
+    ads_archive:
+    - IT
+    mcp: []
+    plan: 'IT: ads_archive (official API) gives full detail for commercial ads delivered there in the past year:
+      primary text, headline, link description, caption, start and stop dates, platforms, languages, UK/EU reach,
+      age x gender reach and targeting. No spend, CTA button or images/video.'
+markets:
+- GB
+window:
+  months: 6
+goal: messaging-creative
+layout: project/date/brand
+output_root: reports
+outputs:
+  markdown: true
+  xlsx: true
+  csv: true
+  html: false
+  drive: false
+visuals:
+  route: inbox
+  window_days: 90
+  max_ads_per_brand: 30
+  video: keyframes
+monitor:
+  cadence: none
+  time: 08:00
+  watch:
+  - new_ads
+  - stopped_ads
+  - offers
+  alerts:
+  - digest
+  - macos
+critic:
+  last_verdict: revise
+  stage: report
+  at: '2026-11-07T13:46:32Z'
+  prompt_version: critic-v1

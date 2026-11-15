@@ -49,7 +49,8 @@ class PartialRunError(ValueError):
 
 def read_run(path: Path, allow_partial: bool = False) -> tuple[dict, list[dict]]:
     header, records, summary, stopped = {}, [], None, None
-    for line in path.read_text().splitlines():
+    # Split on "\n" only: str.splitlines() also breaks on U+2028, U+0085 etc., which can sit inside ad text.
+    for line in path.read_text(encoding="utf-8").split("\n"):
         if not line.strip():
             continue
         rec = json.loads(line)

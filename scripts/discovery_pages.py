@@ -283,7 +283,7 @@ def main(argv=None) -> int:
     files = [args.run] if args.run else sorted((args.data_dir / "discovery" / slug(args.name)).glob("*.jsonl"))
     if not files:
         sys.exit(f"no discovery records under {args.data_dir / 'discovery' / slug(args.name)}")
-    records = [json.loads(line) for f in files for line in f.read_text().splitlines() if line.strip()]
+    records = [json.loads(line) for f in files for line in f.read_text(encoding="utf-8").split("\n") if line.strip()]
     cfg = (load_discovery_config(args.config) if args.config else load_discovery_config())["pages"]
     known, names = known_pages(args.project, args.projects_dir, args.exclude_page)
     rows = classify(aggregate(records), known, cfg, names)

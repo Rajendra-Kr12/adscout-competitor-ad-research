@@ -124,13 +124,57 @@ def print_dry_run(project: dict, groups: list[dict], windows, url: str, limit: i
 
 # --- fetch -------------------------------------------------------------------------------
 
+def reused_note(manifest: dict) -> str:
+    """' (new calls only; group 1 reused from run X, 55 calls)' for groups --resume took from an earlier pull."""
+    parts = [f"group {g['group']} reused from run {g['run_id']}"
+             + (f", {g['reused_calls']} call(s) spent then" if g.get("reused_calls") is not None else "")
+             for g in manifest["groups"] if g.get("reused")]
+    return f" (new calls only; {'; '.join(parts)})" if parts else ""
+
+
+def find_finished_run(data_dir: Path, target: dict, since: str, until: str, windows, mode: str) -> dict | None:
+    """Newest closed raw file for this exact group (Pages, countries, window, mode), else None.
+
+    Used by --resume so a group that was already paid for is not fetched twice. It only reads local files;
+    no Meta call and no guard bypass. A partial or stopped file has no closing summary and is never reused."""
+    raw_dir = data_dir / "raw" / target["key"]
+    want = json.loads(json.dumps({"page_ids": target["page_ids"], "countries": target["countries"],
+                                  "since": since, "until": until, "windows": windows}))
+    for path in sorted(raw_dir.glob("*.jsonl"), reverse=True):
+        try:
+            header, records = normalize.read_run(path)
+        except (ValueError, OSError):
+            continue
+        t = header.get("target", {})
+        have = {"page_ids": t.get("page_ids"), "countries": t.get("countries"), "since": header.get("since"),
+                "until": header.get("until"), "windows": header.get("windows")}
+        if have == want and header.get("mode") == mode:
+            unique = len({r["ad"]["id"] for r in records if r.get("ad", {}).get("id")})
+            return {"raw": path, "run_id": header["run_id"], "records": len(records), "unique_ads": unique}
+    return None
+
+
 def fetch_groups(project: dict, groups: list[dict], *, session: Session, since: str, until: str, windows,
-                 limit: int, api_version: str, data_dir: Path) -> list[dict]:
+                 limit: int, api_version: str, data_dir: Path, resume: bool = False) -> list[dict]:
     """Fetch and normalize each group in turn; stop at the first group that does not finish."""
     out = []
     with session.guard.lock():
         session.preflight(api_version, data_dir)
         for g in groups:
+            prior = find_finished_run(data_dir, group_target(project, g), since, until, windows, session.mode) \
+                if resume else None
+            if prior:
+                print(f"group {g['group']}: reusing finished run {prior['run_id']} (no API calls)", file=sys.stderr)
+                ledger = data_dir / "runs" / f"{prior['run_id']}.json"
+                spent = json.loads(ledger.read_text()).get("calls", 0) if ledger.exists() else None
+                out.append({"group": g["group"], "countries": g["countries"], "brands": g["brands"],
+                            "page_ids": g["page_ids"], "raw": str(prior["raw"].relative_to(data_dir)),
+                            "run_id": prior["run_id"], "ledger": str(ledger.relative_to(data_dir)) if spent is not None else None,
+                            "reused_calls": spent, "calls": 0, "records": prior["records"],
+                            "unique_ads": prior["unique_ads"], "status": "ok", "stop_reason": None, "rc": 0,
+                            "reused": True})
+                normalize.normalize_run(prior["raw"], data_dir, page_map=g["page_map"])
+                continue
             res = fetch_run(target=group_target(project, g), windows=windows, media_types=["ALL"], since=since,
                             until=until, limit=limit, transport=session.transport, token=session.token,
                             mode=session.mode, api_version=api_version, guard=session.guard, data_dir=data_dir)
@@ -195,6 +239,7 @@ def build_index(project: dict, manifest: dict, paths: projects.RunPaths) -> str:
           f"- Window: {manifest['window']['since']} to {manifest['window']['until']} "
           f"({manifest['window']['months']} month{'s' if manifest['window']['months'] != 1 else ''})",
           f"- Fetch: {manifest['mode']}, {calls} ads_archive call(s) in {len(manifest['groups'])} query group(s)"
+          f"{reused_note(manifest)}"
           f"{' (outputs rebuilt since, without new calls)' if manifest.get('rebuilt_without_fetch') else ''}; "
           f"run status **{manifest['status']}**",
           f"- Generated: {manifest['generated_at']} by `scripts/run_project.py`", ""]
@@ -406,6 +451,9 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true", help="print the request plan and call count, send nothing")
     ap.add_argument("--fixture", type=Path, help="serve responses from a synthetic fixture (offline)")
     ap.add_argument("--no-fetch", action="store_true", help="rebuild outputs from data/ads only (no API calls)")
+    ap.add_argument("--resume", action="store_true",
+                    help="reuse a group's finished raw file when Pages, countries and window match (no API calls "
+                         "for it); fetch the remaining groups through the guard as usual")
     args = ap.parse_args(argv)
     today = date.fromisoformat(args.date) if args.date else utc_now().date()
     try:
@@ -433,7 +481,8 @@ def main(argv=None, *, transport=None, guard: Guard | None = None) -> int:
         mode = session.mode
         try:
             groups_run = fetch_groups(project, groups, session=session, since=since, until=until, windows=windows,
-                                      limit=args.limit, api_version=api_version, data_dir=args.data_dir)
+                                      limit=args.limit, api_version=api_version, data_dir=args.data_dir,
+                                      resume=args.resume)
         except GuardStop as exc:
             print(f"guard refused the run: {exc}", file=sys.stderr)
             return 3
